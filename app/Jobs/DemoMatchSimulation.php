@@ -159,10 +159,10 @@ class DemoMatchSimulation implements ShouldQueue
             
             $result = $messageSender->sendText($this->subscriber->phone_number, $formattedMessage);
 
-            if (!$result['success']) {
+            if (!$result) {
                 Log::error('Failed to send demo event', [
                     'event' => $event['type'],
-                    'error' => $result['error'] ?? 'Unknown'
+                    'error' => 'Message send failed'
                 ]);
             }
 
