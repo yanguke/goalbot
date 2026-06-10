@@ -176,16 +176,38 @@ class WhatsAppService
             'demo_mode' => false
         ]);
         
-        return $this->sendText(
+        // Send confirmation with Pay button
+        $cleanNumber = preg_replace('/[^0-9]/', '', $subscriber->phone_number);
+        $isKenyan = str_starts_with($cleanNumber, '254');
+        
+        $header = "✅ You're subscribed!";
+        $body = "You'll receive AI-powered alerts for:\n" .
+                "• Goals & match events\n" .
+                "• Red cards & penalties\n" .
+                "• Match reminders\n" .
+                "• Half-time & full-time scores\n\n" .
+                ($isKenyan ? "Complete payment to activate alerts." : "Complete payment to activate alerts.");
+        $footer = "World Cup 2026 begins June 11, 2026 🏆";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'pay',
+                    'title' => $isKenyan ? '💳 Pay KES 10' : '💳 Pay $2.99'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
             $subscriber->phone_number,
-            "✅ *You're subscribed!*\n\n" .
-            "You'll receive AI-powered alerts for:\n" .
-            "• Goals & match events\n" .
-            "• Red cards & penalties\n" .
-            "• Match reminders\n" .
-            "• Half-time & full-time scores\n\n" .
-            "*World Cup 2026 begins June 11, 2026* 🏆"
+            $header,
+            $body,
+            $footer,
+            $buttons
         );
+        
+        return $result['success'] ?? false;
     }
     
     /**
@@ -415,6 +437,10 @@ class WhatsAppService
             case 'pricing':
                 $this->sendPricing($subscriber->phone_number);
                 return ['status' => 'pricing_sent'];
+                
+            case 'pay':
+                $this->processPayment($subscriber->phone_number);
+                return ['status' => 'payment_initiated'];
                 
             default:
                 return ['status' => 'unknown_button'];
