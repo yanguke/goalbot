@@ -193,6 +193,24 @@ class WhatsAppService
      */
     public function sendPricing(string $phoneNumber): bool
     {
+        $cleanNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+        
+        if (str_starts_with($cleanNumber, '254')) {
+            // Kenyan pricing
+            return $this->sendText(
+                $phoneNumber,
+                "💎 *GoalBot Pricing*\n\n" .
+                "*Pay Per Match*\n" .
+                "• KES 10 per match\n" .
+                "• Full AI commentary\n\n" .
+                "*Full Tournament* 🏆\n" .
+                "• KES 1,000 one-time\n" .
+                "• All 104 matches\n\n" .
+                "Reply */pay* for payment instructions."
+            );
+        }
+        
+        // International pricing
         return $this->sendText(
             $phoneNumber,
             "💎 *GoalBot Pricing*\n\n" .
@@ -226,8 +244,8 @@ class WhatsAppService
             "Complete your subscription securely:\n" .
             "👉 https://goalbot.devs.mobi/pay?ref=" . urlencode($phoneNumber) . "\n\n" .
             "*Options:*\n" .
-            "• $2.99 per match\n" .
-            "• $19.99 full tournament\n\n" .
+            "• $2.99 per match (~€2.75 / ~£2.35)\n" .
+            "• $19.99 full tournament (~€18.50 / ~£15.75)\n\n" .
             "Payments processed securely via Stripe."
         );
     }
@@ -253,8 +271,8 @@ class WhatsAppService
                 "2. Select Lipa na M-Pesa\n" .
                 "3. Select Buy Goods and Services\n" .
                 "4. Enter Till Number: *123456*\n" .
-                "5. Amount: $2.99 (KES ~450) per match\n" .
-                "   or $19.99 (KES ~3,000) full tournament\n" .
+                "5. Amount: KES 10 per match\n" .
+                "   or KES 1,000 full tournament\n" .
                 "6. Confirm with PIN\n\n" .
                 "Reply with screenshot after payment."
             );
@@ -285,13 +303,13 @@ class WhatsAppService
                     'Password' => $password,
                     'Timestamp' => $timestamp,
                     'TransactionType' => 'CustomerBuyGoodsOnline',
-                    'Amount' => 450, // ~$2.99 in KES
+                    'Amount' => 10, // KES 10 per match (test amount)
                     'PartyA' => $formattedPhone,
                     'PartyB' => $shortcode,
                     'PhoneNumber' => $formattedPhone,
                     'CallBackURL' => config('app.url') . '/api/mpesa/callback',
                     'AccountReference' => 'GoalBot',
-                    'TransactionDesc' => 'World Cup Alerts Subscription'
+                    'TransactionDesc' => 'World Cup Match Alerts - KES 10'
                 ]);
             
             if ($stkResponse->successful()) {
@@ -300,7 +318,7 @@ class WhatsAppService
                     "📲 *M-Pesa STK Push Initiated*\n\n" .
                     "Check your phone for the M-Pesa prompt.\n" .
                     "Enter your PIN to complete payment.\n\n" .
-                    "Amount: KES 450 (~$2.99)\n" .
+                    "Amount: KES 10\n" .
                     "Reference: GoalBot\n\n" .
                     "Reply *PAID* after completing payment."
                 );
@@ -317,7 +335,7 @@ class WhatsAppService
                 "⚠️ *Payment Request Failed*\n\n" .
                 "Please try manual payment:\n" .
                 "Till Number: *123456*\n" .
-                "Amount: KES 450 (~$2.99)\n\n" .
+                "Amount: KES 10\n\n" .
                 "Reply with screenshot after payment."
             );
             
@@ -332,7 +350,7 @@ class WhatsAppService
                 "⚠️ *Payment System Busy*\n\n" .
                 "Please use manual M-Pesa:\n" .
                 "Till Number: *123456*\n" .
-                "Amount: KES 450 (~$2.99)\n\n" .
+                "Amount: KES 10\n\n" .
                 "Reply with screenshot after payment."
             );
         }
