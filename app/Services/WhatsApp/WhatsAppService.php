@@ -138,8 +138,17 @@ class WhatsAppService
      */
     public function startDemo(Subscriber $subscriber): bool
     {
+        // Check if demo already running
+        if ($subscriber->demo_mode) {
+            $this->sendText(
+                $subscriber->phone_number,
+                "⏳ Demo already in progress!\n\nCheck your messages - match events are being sent every minute."
+            );
+            return false;
+        }
+
         $subscriber->update(['demo_mode' => true, 'demo_started_at' => now()]);
-        
+
         $this->sendText(
             $subscriber->phone_number,
             "🎬 *Demo Match Starting...*\n\n" .
