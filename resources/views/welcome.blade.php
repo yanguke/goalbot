@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+lkjnb∏><!-- ˛  --><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -443,18 +443,21 @@
             </div>
             <nav class="nav-links">
                 <a href="#how-it-works">How It Works</a>
-                <a href="https://goalbot.test/api/health">API Status</a>
+                <a href="https://goalbot.devs.mobi/api/health">API Status</a>
             </nav>
         </header>
         
         <section class="hero">
             <div class="hero-content">
-                <h1>Never Miss a World Cup Moment</h1>
-                <p><strong>AI-powered match commentary</strong> delivered to your WhatsApp. Not just scores—context, stats, and personality in every alert.</p>
+                <h1>
+                    GET EVERY
+                    <span style="color: #25d366;">MOMENT</span>
+                </h1>
+                <p><strong>AI-POWERED MATCH INTELLIGENCE.</strong> Context, stats, personality—not just scores. Delivered instantly to your WhatsApp.</p>
                 
-                <a href="https://wa.me/YOUR_PHONE_NUMBER?text=SUBSCRIBE" class="cta-button">
+                <a href="https://wa.me/254715333355?text=goal" class="cta-button">
                     <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    Start on WhatsApp
+                    SEND "GOAL" TO START
                 </a>
                 
                 <div class="features">
@@ -484,23 +487,23 @@
                             <div class="chat-date">Today</div>
                             
                             <div class="message message-bot" style="animation-delay: 0.2s">
-                                🔴 LIVE! Argentina vs France has kicked off at Estadio Azteca! ⚽
-                                <div class="message-time">8:00 PM</div>
+                                🔴 KICKOFF! Mexico vs South Africa LIVE at Estadio Azteca! The greatest show on earth begins! 🏆
+                                <div class="message-time">20:00 UTC</div>
                             </div>
                             
                             <div class="message message-bot" style="animation-delay: 0.6s">
-                                ⚽ GOAL! Argentina 1-0! Messi scores at 23' with a brilliant free kick 🐐
-                                <div class="message-time">8:23 PM</div>
+                                ⚽ GOAL! Lozano scores for Mexico! Magical free-kick at 23' 🇲🇽
+                                <div class="message-time">20:23 UTC</div>
                             </div>
                             
                             <div class="message message-bot" style="animation-delay: 1s">
-                                🟥 RED CARD! France down to 10 men. Griezmann sent off at 67' 🚨
-                                <div class="message-time">8:47 PM</div>
+                                🟥 RED CARD! Mokoena sent off! South Africa down to 10 men at 67'
+                                <div class="message-time">20:47 UTC</div>
                             </div>
                             
                             <div class="message message-bot" style="animation-delay: 1.4s">
-                                🏁 FULL TIME! Argentina win 2-1 and top Group C! 🏆
-                                <div class="message-time">9:45 PM</div>
+                                🏁 FULL TIME ET! Mexico win 3-3 (4-3 pens)! What an opening match! 🏆
+                                <div class="message-time">21:45 UTC</div>
                             </div>
                             
                             <div class="typing-indicator" style="animation-delay: 1.8s">
@@ -534,8 +537,8 @@
             <div class="steps">
                 <div class="step">
                     <div class="step-number">1</div>
-                    <h3>Subscribe</h3>
-                    <p>Send "SUBSCRIBE" to GoalBot on WhatsApp. Set your favorite team to get personalized alerts.</p>
+                    <h3>Start</h3>
+                    <p>Send "GOAL" to +254 715 333 355 on WhatsApp or click the button above. Get instant access to match alerts.</p>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
@@ -551,8 +554,8 @@
         </section>
         
         <footer class="footer">
-            <p>Built for World Cup 2026 USA/Canada/Mexico ⚽</p>
-                    </footer>
+            <p>World Cup 2026 ⚽ USA • Canada • Mexico | Send GOAL to +254 715 333 355</p>
+        </footer>
     </div>
 </body>
 </html>
