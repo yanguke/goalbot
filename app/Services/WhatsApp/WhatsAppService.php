@@ -71,6 +71,7 @@ class WhatsAppService
                 'phone_number' => $phoneNumber,
                 'is_active' => true,
                 'notifications_enabled' => true,
+                'notify_all_matches' => true,
                 'demo_mode' => false,
             ]);
             
@@ -169,8 +170,9 @@ class WhatsAppService
     public function subscribeUser(Subscriber $subscriber): bool
     {
         $subscriber->update([
-            'is_active' => true, 
+            'is_active' => true,
             'notifications_enabled' => true,
+            'notify_all_matches' => true,
             'demo_mode' => false
         ]);
         
