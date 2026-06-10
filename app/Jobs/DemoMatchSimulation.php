@@ -146,7 +146,19 @@ class DemoMatchSimulation implements ShouldQueue
 
     public function handle(MessageSender $messageSender)
     {
-        Log::info('Starting demo match simulation', ['subscriber' => $this->subscriber->id]);
+        Log::info('Starting demo match simulation', ['subscriber' => $this->subscriber->id, 'job_id' => $this->job->uuid ?? 'unknown']);
+
+        // Check if another demo job is already running for this subscriber
+        $runningDemos = \DB::table('jobs')
+            ->where('queue', 'default')
+            ->where('payload', 'like', '%DemoMatchSimulation%')
+            ->where('payload', 'like', '%"id":' . $this->subscriber->id . '%')
+            ->count();
+
+        if ($runningDemos > 1) {
+            Log::info('Duplicate demo job detected, skipping', ['subscriber' => $this->subscriber->id]);
+            return;
+        }
 
         foreach (self::MATCH_EVENTS as $index => $event) {
             $this->subscriber->refresh();
