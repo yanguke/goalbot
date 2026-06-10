@@ -21,5 +21,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Seed World Cup 2026 test matches
+        $this->call(WorldCupTestDataSeeder::class);
     }
 }
