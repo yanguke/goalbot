@@ -2,6 +2,7 @@
 
 namespace App\Services\WhatsApp;
 
+use App\Models\MpesaTransaction;
 use App\Models\Subscriber;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -165,34 +166,63 @@ class WhatsAppService
     }
     
     /**
-     * Handle subscription - show confirmation preview
+     * Handle subscription - show confirmation preview with payment options
      */
     public function subscribeUser(Subscriber $subscriber): bool
     {
         $cleanNumber = preg_replace('/[^0-9]/', '', $subscriber->phone_number);
         $isKenyan = str_starts_with($cleanNumber, '254');
         
-        $header = "⚽ GoalBot Subscription";
-        $body = "You're about to subscribe to AI-powered World Cup 2026 alerts:\n\n" .
-                "📱 *What you will receive:*\n" .
-                "• Goals & match events\n" .
-                "• Red cards & penalties\n" .
-                "• Match reminders\n" .
-                "• Half-time & full-time scores\n\n" .
-                ($isKenyan 
-                    ? "💰 *Cost:* KES 10 per match or KES 1,000 full tournament" 
-                    : "💰 *Cost:* $2.99 per match or $19.99 full tournament");
-        $footer = "Tap Continue to proceed 👇";
-        
-        $buttons = [
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'confirm_subscribe',
-                    'title' => '✅ Continue'
+        if ($isKenyan) {
+            // Kenyan user - show KES payment options
+            $header = "⚽ GoalBot Subscription";
+            $body = "You're about to subscribe to AI-powered World Cup 2026 alerts:\n\n" .
+                    "📱 *What you will receive:*\n" .
+                    "• Goals & match events\n" .
+                    "• Red cards & penalties\n" .
+                    "• Match reminders\n" .
+                    "• Half-time & full-time scores\n\n" .
+                    "💰 *Choose your plan:*";
+            $footer = "Tap a button to pay 👇";
+            
+            $buttons = [
+                [
+                    'type' => 'reply',
+                    'reply' => [
+                        'id' => 'pay_per_match',
+                        'title' => '💳 Pay KES 10'
+                    ]
+                ],
+                [
+                    'type' => 'reply',
+                    'reply' => [
+                        'id' => 'pay_full',
+                        'title' => '💳 Pay KES 1,000'
+                    ]
                 ]
-            ]
-        ];
+            ];
+        } else {
+            // International user - redirect to Stripe
+            $header = "⚽ GoalBot Subscription";
+            $body = "You're about to subscribe to AI-powered World Cup 2026 alerts:\n\n" .
+                    "📱 *What you will receive:*\n" .
+                    "• Goals & match events\n" .
+                    "• Red cards & penalties\n" .
+                    "• Match reminders\n" .
+                    "• Half-time & full-time scores\n\n" .
+                    "💰 *Cost:* $2.99 per match or $19.99 full tournament";
+            $footer = "Tap Continue to proceed 👇";
+            
+            $buttons = [
+                [
+                    'type' => 'reply',
+                    'reply' => [
+                        'id' => 'pay',
+                        'title' => '💳 Pay $2.99'
+                    ]
+                ]
+            ];
+        }
         
         $result = $this->messageSender->sendInteractiveButtons(
             $subscriber->phone_number,
@@ -421,6 +451,126 @@ class WhatsAppService
     }
     
     /**
+     * Initiate STK Push with transaction recording
+     */
+    protected function initiateStkPush(string $phoneNumber, int $amount, string $paymentType): bool
+    {
+        $shortcode = config('services.mpesa.shortcode', '174379');
+        $passkey = config('services.mpesa.passkey');
+        $consumerKey = config('services.mpesa.consumer_key');
+        $consumerSecret = config('services.mpesa.consumer_secret');
+        
+        // Check if MPesa credentials are configured
+        if (!$passkey || !$consumerKey || !$consumerSecret) {
+            Log::warning('MPesa not configured', ['phone' => $phoneNumber]);
+            return $this->sendText(
+                $phoneNumber,
+                "💳 *M-Pesa Not Configured*\n\n" .
+                "Please try manual payment:\n" .
+                "Till Number: *123456*\n" .
+                "Amount: KES {$amount}\n\n" .
+                "Reply with screenshot after payment."
+            );
+        }
+        
+        // Format phone number for STK
+        $formattedPhone = '0' . substr(preg_replace('/[^0-9]/', '', $phoneNumber), -9);
+        
+        // Generate timestamp and password
+        $timestamp = now()->format('YmdHis');
+        $password = base64_encode($shortcode . $passkey . $timestamp);
+        
+        // Create account reference
+        $accountReference = $paymentType === 'full_tournament' ? 'GOALBOT_FULL' : 'GOALBOT_MATCH';
+        $transactionDesc = $paymentType === 'full_tournament' 
+            ? 'GoalBot Full Tournament - KES 1000' 
+            : 'GoalBot Per Match - KES 10';
+        
+        try {
+            // Get access token
+            $authResponse = Http::withBasicAuth($consumerKey, $consumerSecret)
+                ->get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials');
+            
+            if (!$authResponse->successful()) {
+                throw new \Exception('Failed to get MPesa access token');
+            }
+            
+            $accessToken = $authResponse->json('access_token');
+            
+            // Initiate STK Push
+            $stkResponse = Http::withToken($accessToken)
+                ->post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', [
+                    'BusinessShortCode' => $shortcode,
+                    'Password' => $password,
+                    'Timestamp' => $timestamp,
+                    'TransactionType' => 'CustomerBuyGoodsOnline',
+                    'Amount' => $amount,
+                    'PartyA' => $formattedPhone,
+                    'PartyB' => $shortcode,
+                    'PhoneNumber' => $formattedPhone,
+                    'CallBackURL' => config('app.url') . '/api/mpesa/callback',
+                    'AccountReference' => $accountReference,
+                    'TransactionDesc' => $transactionDesc
+                ]);
+            
+            if ($stkResponse->successful()) {
+                $responseData = $stkResponse->json();
+                
+                // Save transaction record
+                MpesaTransaction::create([
+                    'phone_number' => $phoneNumber,
+                    'amount' => $amount,
+                    'payment_type' => $paymentType,
+                    'checkout_request_id' => $responseData['CheckoutRequestID'] ?? null,
+                    'merchant_request_id' => $responseData['MerchantRequestID'] ?? null,
+                    'status' => 'pending',
+                    'account_reference' => $accountReference
+                ]);
+                
+                $this->sendText(
+                    $phoneNumber,
+                    "📲 *M-Pesa STK Push Initiated*\n\n" .
+                    "Check your phone for the M-Pesa prompt.\n" .
+                    "Enter your PIN to complete payment.\n\n" .
+                    "Amount: KES {$amount}\n" .
+                    "Reference: {$accountReference}\n\n" .
+                    "You'll receive confirmation once payment is received."
+                );
+                return true;
+            }
+            
+            Log::error('MPesa STK Push failed', [
+                'response' => $stkResponse->json(),
+                'phone' => $phoneNumber
+            ]);
+            
+            return $this->sendText(
+                $phoneNumber,
+                "⚠️ *Payment Request Failed*\n\n" .
+                "Please try manual payment:\n" .
+                "Till Number: *123456*\n" .
+                "Amount: KES {$amount}\n\n" .
+                "Reply with screenshot after payment."
+            );
+            
+        } catch (\Exception $e) {
+            Log::error('MPesa STK Push exception', [
+                'error' => $e->getMessage(),
+                'phone' => $phoneNumber
+            ]);
+            
+            return $this->sendText(
+                $phoneNumber,
+                "⚠️ *Payment System Busy*\n\n" .
+                "Please use manual M-Pesa:\n" .
+                "Till Number: *123456*\n" .
+                "Amount: KES {$amount}\n\n" .
+                "Reply with screenshot after payment."
+            );
+        }
+    }
+    
+    /**
      * Send welcome message
      */
     public function sendWelcome(string $phoneNumber): bool
@@ -476,9 +626,13 @@ class WhatsAppService
                 $this->subscribeUser($subscriber);
                 return ['status' => 'subscribe_preview_sent'];
                 
-            case 'confirm_subscribe':
-                $this->confirmSubscription($subscriber);
-                return ['status' => 'subscribed'];
+            case 'pay_per_match':
+                $this->initiateStkPush($subscriber->phone_number, 10, 'per_match');
+                return ['status' => 'stk_initiated'];
+                
+            case 'pay_full':
+                $this->initiateStkPush($subscriber->phone_number, 1000, 'full_tournament');
+                return ['status' => 'stk_initiated'];
                 
             case 'pricing':
                 $this->sendPricing($subscriber->phone_number);

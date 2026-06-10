@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\MpesaController;
 use App\Http\Controllers\Webhook\WhatsAppController;
 use App\Http\Controllers\Webhook\WhatsAppInteractiveController;
 use App\Http\Controllers\Webhook\WhatsAppVerifyController;
@@ -26,3 +27,6 @@ Route::post('/webhook/whatsapp', [WhatsAppInteractiveController::class, 'handle'
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'service' => 'GoalBot']);
 });
+
+// M-Pesa Callback
+Route::post('/mpesa/callback', [MpesaController::class, 'callback']);
