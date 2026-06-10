@@ -143,8 +143,8 @@ class WhatsAppService
         $this->sendText(
             $subscriber->phone_number,
             "🎬 *Demo Match Starting...*\n\n" .
-            "Argentina 🇦🇷 vs France 🇫🇷\n" .
-            "World Cup 2026 Final\n\n" .
+            "Mexico �� vs South Africa ��\n" .
+            "World Cup 2026 Opening Match\n\n" .
             "You'll receive match updates every minute. Sit back and enjoy! ⚽"
         );
         
