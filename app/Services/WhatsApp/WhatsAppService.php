@@ -382,7 +382,7 @@ class WhatsAppService
         try {
             // Get access token
             $authResponse = Http::withBasicAuth($consumerKey, $consumerSecret)
-                ->get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials');
+                ->get('https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials');
             
             if (!$authResponse->successful()) {
                 throw new \Exception('Failed to get MPesa access token');
@@ -392,7 +392,7 @@ class WhatsAppService
             
             // Initiate STK Push
             $stkResponse = Http::withToken($accessToken)
-                ->post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', [
+                ->post('https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest', [
                     'BusinessShortCode' => $shortcode,
                     'Password' => $password,
                     'Timestamp' => $timestamp,
@@ -489,7 +489,7 @@ class WhatsAppService
         try {
             // Get access token
             $authResponse = Http::withBasicAuth($consumerKey, $consumerSecret)
-                ->get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials');
+                ->get('https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials');
             
             if (!$authResponse->successful()) {
                 throw new \Exception('Failed to get MPesa access token');
@@ -499,7 +499,7 @@ class WhatsAppService
             
             // Initiate STK Push
             $stkResponse = Http::withToken($accessToken)
-                ->post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', [
+                ->post('https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest', [
                     'BusinessShortCode' => $shortcode,
                     'Password' => $password,
                     'Timestamp' => $timestamp,
