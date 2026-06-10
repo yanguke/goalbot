@@ -641,11 +641,11 @@ class WhatsAppService
                 return ['status' => 'subscribe_preview_sent'];
                 
             case 'pay_per_match':
-                $this->initiateStkPush($subscriber->phone_number, 10, 'per_match');
+                $this->initiateStkPush($subscriber->phone_number, 49, 'per_match');
                 return ['status' => 'stk_initiated'];
                 
             case 'pay_full':
-                $this->initiateStkPush($subscriber->phone_number, 1000, 'full_tournament');
+                $this->initiateStkPush($subscriber->phone_number, 999, 'full_tournament');
                 return ['status' => 'stk_initiated'];
                 
             case 'pricing':
