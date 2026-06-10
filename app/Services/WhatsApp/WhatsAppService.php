@@ -372,8 +372,15 @@ class WhatsAppService
             );
         }
         
-        // Format phone number for STK (remove 254, add 0)
-        $formattedPhone = '0' . substr(preg_replace('/[^0-9]/', '', $phoneNumber), -9);
+        // Format phone number for STK (254XXXXXXXXX format)
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phoneNumber);
+        if (str_starts_with($cleanPhone, '0')) {
+            $cleanPhone = substr($cleanPhone, 1);
+        }
+        if (!str_starts_with($cleanPhone, '254')) {
+            $cleanPhone = '254' . $cleanPhone;
+        }
+        $formattedPhone = $cleanPhone;
         
         // Generate timestamp
         $timestamp = now()->format('YmdHis');
@@ -473,8 +480,15 @@ class WhatsAppService
             );
         }
         
-        // Format phone number for STK
-        $formattedPhone = '0' . substr(preg_replace('/[^0-9]/', '', $phoneNumber), -9);
+        // Format phone number for STK (254XXXXXXXXX format, no leading 0)
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phoneNumber);
+        if (str_starts_with($cleanPhone, '0')) {
+            $cleanPhone = substr($cleanPhone, 1);
+        }
+        if (!str_starts_with($cleanPhone, '254')) {
+            $cleanPhone = '254' . $cleanPhone;
+        }
+        $formattedPhone = $cleanPhone;
         
         // Generate timestamp and password
         $timestamp = now()->format('YmdHis');
