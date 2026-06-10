@@ -62,4 +62,14 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
 
+    // M-Pesa (Kenya mobile payments)
+    'mpesa' => [
+        'environment' => env('MPESA_ENVIRONMENT', 'sandbox'),
+        'shortcode' => env('MPESA_SHORTCODE', '174379'),
+        'passkey' => env('MPESA_PASSKEY'),
+        'consumer_key' => env('MPESA_CONSUMER_KEY'),
+        'consumer_secret' => env('MPESA_CONSUMER_SECRET'),
+        'callback_url' => env('MPESA_CALLBACK_URL'),
+    ],
+
 ];

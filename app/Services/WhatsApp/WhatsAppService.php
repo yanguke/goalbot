@@ -205,6 +205,138 @@ class WhatsAppService
     }
     
     /**
+     * Process payment request
+     */
+    public function processPayment(string $phoneNumber): bool
+    {
+        // Check if Kenyan number (starts with 254)
+        $cleanNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+        
+        if (str_starts_with($cleanNumber, '254')) {
+            // Kenyan number - initiate M-Pesa STK Push
+            return $this->initiateMpesaStkPush($phoneNumber);
+        }
+        
+        // Non-Kenyan number - send secure payment link
+        return $this->sendText(
+            $phoneNumber,
+            "💳 *Secure Payment*\n\n" .
+            "Complete your subscription securely:\n" .
+            "👉 https://goalbot.devs.mobi/pay?ref=" . urlencode($phoneNumber) . "\n\n" .
+            "*Options:*\n" .
+            "• $2.99 per match\n" .
+            "• $19.99 full tournament\n\n" .
+            "Payments processed securely via Stripe."
+        );
+    }
+    
+    /**
+     * Initiate M-Pesa STK Push for Kenyan numbers
+     */
+    protected function initiateMpesaStkPush(string $phoneNumber): bool
+    {
+        $shortcode = config('services.mpesa.shortcode', '174379');
+        $passkey = config('services.mpesa.passkey');
+        $consumerKey = config('services.mpesa.consumer_key');
+        $consumerSecret = config('services.mpesa.consumer_secret');
+        
+        // Check if MPesa credentials are configured
+        if (!$passkey || !$consumerKey || !$consumerSecret) {
+            Log::warning('MPesa not configured, sending manual payment instructions', ['phone' => $phoneNumber]);
+            return $this->sendText(
+                $phoneNumber,
+                "💳 *Payment Instructions*\n\n" .
+                "Send payment via M-Pesa:\n" .
+                "1. Go to M-Pesa menu\n" .
+                "2. Select Lipa na M-Pesa\n" .
+                "3. Select Buy Goods and Services\n" .
+                "4. Enter Till Number: *123456*\n" .
+                "5. Amount: $2.99 (KES ~450) per match\n" .
+                "   or $19.99 (KES ~3,000) full tournament\n" .
+                "6. Confirm with PIN\n\n" .
+                "Reply with screenshot after payment."
+            );
+        }
+        
+        // Format phone number for STK (remove 254, add 0)
+        $formattedPhone = '0' . substr(preg_replace('/[^0-9]/', '', $phoneNumber), -9);
+        
+        // Generate timestamp
+        $timestamp = now()->format('YmdHis');
+        $password = base64_encode($shortcode . $passkey . $timestamp);
+        
+        try {
+            // Get access token
+            $authResponse = Http::withBasicAuth($consumerKey, $consumerSecret)
+                ->get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials');
+            
+            if (!$authResponse->successful()) {
+                throw new \Exception('Failed to get MPesa access token');
+            }
+            
+            $accessToken = $authResponse->json('access_token');
+            
+            // Initiate STK Push
+            $stkResponse = Http::withToken($accessToken)
+                ->post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', [
+                    'BusinessShortCode' => $shortcode,
+                    'Password' => $password,
+                    'Timestamp' => $timestamp,
+                    'TransactionType' => 'CustomerBuyGoodsOnline',
+                    'Amount' => 450, // ~$2.99 in KES
+                    'PartyA' => $formattedPhone,
+                    'PartyB' => $shortcode,
+                    'PhoneNumber' => $formattedPhone,
+                    'CallBackURL' => config('app.url') . '/api/mpesa/callback',
+                    'AccountReference' => 'GoalBot',
+                    'TransactionDesc' => 'World Cup Alerts Subscription'
+                ]);
+            
+            if ($stkResponse->successful()) {
+                $this->sendText(
+                    $phoneNumber,
+                    "📲 *M-Pesa STK Push Initiated*\n\n" .
+                    "Check your phone for the M-Pesa prompt.\n" .
+                    "Enter your PIN to complete payment.\n\n" .
+                    "Amount: KES 450 (~$2.99)\n" .
+                    "Reference: GoalBot\n\n" .
+                    "Reply *PAID* after completing payment."
+                );
+                return true;
+            }
+            
+            Log::error('MPesa STK Push failed', [
+                'response' => $stkResponse->json(),
+                'phone' => $phoneNumber
+            ]);
+            
+            return $this->sendText(
+                $phoneNumber,
+                "⚠️ *Payment Request Failed*\n\n" .
+                "Please try manual payment:\n" .
+                "Till Number: *123456*\n" .
+                "Amount: KES 450 (~$2.99)\n\n" .
+                "Reply with screenshot after payment."
+            );
+            
+        } catch (\Exception $e) {
+            Log::error('MPesa STK Push exception', [
+                'error' => $e->getMessage(),
+                'phone' => $phoneNumber
+            ]);
+            
+            return $this->sendText(
+                $phoneNumber,
+                "⚠️ *Payment System Busy*\n\n" .
+                "Please use manual M-Pesa:\n" .
+                "Till Number: *123456*\n" .
+                "Amount: KES 450 (~$2.99)\n\n" .
+                "Reply with screenshot after payment."
+            );
+        }
+    }
+    
+    /**
      * Send welcome message
      */
     public function sendWelcome(string $phoneNumber): bool
@@ -285,6 +417,7 @@ class WhatsAppService
             'demo' => $this->startDemo($subscriber) ? ['status' => 'demo_started'] : ['status' => 'demo_failed'],
             'subscribe', 'opt in', 'join' => $this->subscribeUser($subscriber) ? ['status' => 'subscribed'] : ['status' => 'subscribe_failed'],
             'pricing', 'price' => $this->sendPricing($subscriber->phone_number) ? ['status' => 'pricing_sent'] : ['status' => 'pricing_failed'],
+            'pay', '/pay' => $this->processPayment($subscriber->phone_number) ? ['status' => 'payment_initiated'] : ['status' => 'payment_failed'],
             default => $this->sendWelcome($subscriber->phone_number) ? ['status' => 'welcome_sent'] : ['status' => 'welcome_failed'],
         };
     }
