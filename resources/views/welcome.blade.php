@@ -3,198 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoalBot - Get Every World Cup Moment</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>GoalBot — World Cup Alerts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, sans-serif;
             background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #0d2137 100%);
             color: #fff;
             min-height: 100vh;
-            overflow-x: hidden;
-        }
-        
-        .noise {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            opacity: 0.03;
-            z-index: 1;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            line-height: 1.6;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            z-index: 2;
+            padding: 4rem 2rem;
         }
         
-        .header {
+        header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 1rem 0;
-            margin-bottom: 4rem;
+            align-items: center;
+            margin-bottom: 6rem;
         }
         
-        .logo {
-            font-weight: 900;
-            font-size: 1.75rem;
+        .brand {
+            font-weight: 600;
+            font-size: 1.125rem;
             letter-spacing: -0.02em;
         }
         
-        .logo span { color: #00d2ff; }
-        
-        .nav-links a {
-            color: rgba(255,255,255,0.6);
-            text-decoration: none;
-            font-weight: 600;
-            margin-left: 2rem;
-            transition: color 0.3s;
+        .brand::before {
+            content: "⚽ ";
         }
         
-        .nav-links a:hover { color: #00d2ff; }
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav a {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav a:hover { color: #00d2ff; }
         
         .hero {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-            min-height: 75vh;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 6rem;
+            align-items: start;
         }
         
-        .hero-content h1 {
-            font-size: 5rem;
-            font-weight: 900;
-            line-height: 0.95;
-            margin-bottom: 2rem;
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 600;
+            line-height: 1.1;
             letter-spacing: -0.03em;
-            text-transform: uppercase;
+            margin-bottom: 1.5rem;
         }
         
-        .hero-content h1 .highlight {
-            color: #00d2ff;
-            display: block;
-        }
-        
-        .hero-content p {
-            font-size: 1.35rem;
-            color: rgba(255,255,255,0.6);
+        .subtitle {
+            font-size: 1.25rem;
+            color: rgba(255,255,255,0.7);
             margin-bottom: 2.5rem;
-            line-height: 1.5;
-            max-width: 450px;
+            max-width: 400px;
         }
         
-        .cta-group {
+        .pricing {
             display: flex;
-            gap: 1rem;
             align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
         }
         
-        .cta-button {
+        .price {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .price span {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.6);
+            font-weight: 400;
+        }
+        
+        .cta {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             background: #25d366;
             color: #000;
-            padding: 1.25rem 2.5rem;
-            border-radius: 0;
-            font-weight: 800;
-            font-size: 1.1rem;
-            text-decoration: none;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-        }
-        
-        .cta-button:hover {
-            background: #fff;
-            transform: translateY(-3px);
-            box-shadow: 0 20px 40px rgba(37, 211, 102, 0.4);
-        }
-        
-        .price-pill {
-            background: rgba(255,255,255,0.1);
-            padding: 0.75rem 1.5rem;
-            border: 1px solid rgba(255,255,255,0.2);
+            padding: 1rem 1.75rem;
+            border-radius: 8px;
             font-weight: 600;
-            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s;
         }
         
-        .marquee {
-            background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
-            color: #000;
-            padding: 0.75rem 0;
-            overflow: hidden;
-            white-space: nowrap;
-            font-weight: 700;
-            font-size: 0.9rem;
+        .cta:hover {
+            background: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+        }
+        
+        .cta svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .features-list {
+            margin-top: 3rem;
+            padding-top: 3rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .features-list h3 {
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 4rem;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 1rem;
+            font-weight: 600;
         }
         
-        .marquee-content {
-            display: inline-block;
-            animation: marquee 20s linear infinite;
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
         }
         
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-        
-        .phone-container {
+        .feature-item {
             display: flex;
-            justify-content: center;
             align-items: center;
-            position: relative;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
         }
         
-        .phone-frame {
-            position: absolute;
-            width: 280px;
-            height: 540px;
-            border: 2px solid #00d2ff;
-            border-radius: 42px;
-            transform: rotate(-3deg);
-            opacity: 0.3;
+        .feature-item::before {
+            content: "✓";
+            color: #00d2ff;
+            font-weight: 600;
         }
         
-        .phone-container:hover .phone-frame {
-            transform: rotate(-3deg) scale(1.02);
-        }
-        
-        .phone-container:hover .phone {
-            transform: rotate(-3deg) scale(1.01);
-            transition: transform 0.3s ease;
+        .phone-wrapper {
+            position: sticky;
+            top: 2rem;
         }
         
         .phone {
-            width: 280px;
-            height: 540px;
+            width: 270px;
+            height: 520px;
+            margin: 0 auto;
             background: #111;
-            border-radius: 38px;
-            padding: 12px;
-            position: relative;
-            z-index: 2;
-            transform: rotate(-3deg);
-            transition: transform 0.3s ease;
+            border-radius: 32px;
+            padding: 10px;
+            box-shadow: 
+                0 0 0 1px #222,
+                0 20px 40px -10px rgba(0,0,0,0.5);
         }
         
-        .phone-screen {
-            width: 100%;
-            height: 100%;
+        .phone-inner {
             background: #0a0a0a;
-            border-radius: 30px;
+            border-radius: 24px;
             overflow: hidden;
+            height: 100%;
             display: flex;
             flex-direction: column;
         }
@@ -202,100 +182,118 @@
         .phone-header {
             background: #111;
             padding: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
             border-bottom: 1px solid #222;
         }
         
-        .phone-avatar {
-            width: 40px;
-            height: 40px;
+        .phone-header-top {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .avatar {
+            width: 36px;
+            height: 36px;
             background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1rem;
         }
         
-        .phone-title h3 { font-size: 1rem; font-weight: 700; }
-        .phone-title p { font-size: 0.75rem; color: #00d2ff; }
+        .phone-title h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #fff;
+        }
         
-        .chat-area {
-            flex: 1;
+        .phone-title p {
+            font-size: 0.75rem;
+            color: #00d2ff;
+        }
+        
+        .chat {
             padding: 1rem;
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            flex: 1;
+            overflow-y: auto;
         }
         
-        .message {
-            max-width: 90%;
-            padding: 1rem;
+        .chat-bubble {
             background: #1a1a1a;
+            color: #fff;
+            padding: 0.875rem 1rem;
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
             border-left: 3px solid #00d2ff;
-            font-size: 0.9rem;
-            animation: slideUp 0.5s ease-out;
+            font-size: 0.875rem;
+            max-width: 90%;
+            animation: fadeIn 0.4s ease-out;
         }
         
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .message-time {
+        .chat-time {
             font-size: 0.7rem;
             color: #666;
-            margin-top: 0.5rem;
-            text-transform: uppercase;
+            margin-top: 0.25rem;
         }
         
-        .stats-row {
+        .meta {
+            margin-top: 6rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
-            gap: 3rem;
-            margin-top: 3rem;
-            padding-top: 3rem;
-            border-top: 1px solid #222;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .stat-item h3 {
-            font-size: 3rem;
-            font-weight: 900;
+        .meta-left {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.875rem;
+        }
+        
+        .meta-right {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .meta-item {
+            text-align: right;
+        }
+        
+        .meta-item strong {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 600;
             color: #00d2ff;
         }
         
-        .stat-item p {
+        .meta-item span {
+            font-size: 0.75rem;
             color: rgba(255,255,255,0.5);
-            font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
         
-        .footer {
-            margin-top: 6rem;
-            padding: 2rem 0;
-            text-align: center;
-            color: rgba(255,255,255,0.4);
-            font-size: 0.85rem;
-            border-top: 1px solid #222;
-        }
-        
-        @media (max-width: 968px) {
+        @media (max-width: 900px) {
             .hero { grid-template-columns: 1fr; }
-            .hero-content h1 { font-size: 3rem; }
-            .cta-group { flex-direction: column; align-items: flex-start; }
-            .stats-row { flex-direction: column; gap: 1.5rem; }
+            .phone-wrapper { position: static; margin-top: 3rem; }
+            h1 { font-size: 2.5rem; }
         }
     </style>
 </head>
 <body>
-    <div class="noise"></div>
-    
     <div class="container">
-        <header class="header">
-            <div class="logo">GOAL<span>BOT</span></div>
-            <nav class="nav-links">
+        <header>
+            <div class="brand">GoalBot</div>
+            <nav class="nav">
                 <a href="https://wa.me/254715333355?text=goal">Start</a>
                 <a href="/api/health">Status</a>
             </nav>
@@ -303,62 +301,60 @@
         
         <section class="hero">
             <div class="hero-content">
-                <h1>
-                    GET EVERY
-                    <span class="highlight">MOMENT</span>
-                </h1>
-                <p><strong>AI-POWERED MATCH INTELLIGENCE.</strong> Context, stats, personality—not just scores. Delivered instantly to your WhatsApp.</p>
+                <h1>World Cup alerts, delivered.</h1>
+                <p class="subtitle"><strong>AI-powered commentary</strong> with context and personality. Not just scores—insights, stats, and storytelling.</p>
                 
-                <div class="cta-group">
-                    <a href="https://wa.me/254715333355?text=goal" class="cta-button">
-                        SEND "GOAL" →
-                    </a>
-                    <div class="price-pill">From $2.99/match</div>
+                <div class="pricing">
+                    <div class="price">$2.99 <span>/ match</span></div>
+                    <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">or $19.99 full tournament</div>
                 </div>
                 
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <h3>104</h3>
-                        <p>Matches</p>
-                    </div>
-                    <div class="stat-item">
-                        <h3>AI</h3>
-                        <p>Powered</p>
-                    </div>
-                    <div class="stat-item">
-                        <h3>48</h3>
-                        <p>Teams</p>
+                <a href="https://wa.me/254715333355?text=goal" class="cta">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Send "GOAL" to Start
+                </a>
+                
+                <div class="features-list">
+                    <h3>What's included</h3>
+                    <div class="features-grid">
+                        <div class="feature-item">AI-crafted alerts</div>
+                        <div class="feature-item">Smart context</div>
+                        <div class="feature-item">Half-time scores</div>
+                        <div class="feature-item">Full-time results</div>
+                        <div class="feature-item">Penalty notifications</div>
+                        <div class="feature-item">Match reminders</div>
                     </div>
                 </div>
             </div>
             
-            <div class="phone-container">
-                <div class="phone-frame"></div>
+            <div class="phone-wrapper">
                 <div class="phone">
-                    <div class="phone-screen">
+                    <div class="phone-inner">
                         <div class="phone-header">
-                            <div class="phone-avatar">⚽</div>
-                            <div class="phone-title">
-                                <h3>GoalBot</h3>
-                                <p>● LIVE</p>
+                            <div class="phone-header-top">
+                                <div class="avatar">⚽</div>
+                                <div class="phone-title">
+                                    <h4>GoalBot</h4>
+                                    <p>online</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="chat-area">
-                            <div class="message" style="animation-delay: 0.2s">
-                                🔴 KICKOFF<br>Mexico vs South Africa LIVE! The greatest show on earth begins! 🏆
-                                <div class="message-time">20:00 UTC</div>
+                        <div class="chat">
+                            <div class="chat-bubble" style="animation-delay: 0.1s">
+                                🔴 Live: Mexico vs South Africa has kicked off! The greatest show on earth begins! 🏆
+                                <div class="chat-time">20:00</div>
                             </div>
-                            <div class="message" style="animation-delay: 0.5s">
-                                ⚽ GOAL<br>Lozano scores! Magical free-kick for Mexico! 🇲🇽 1-0
-                                <div class="message-time">20:23 UTC</div>
+                            <div class="chat-bubble" style="animation-delay: 0.3s">
+                                ⚽ Goal: Lozano scores for Mexico! Magical free-kick at 23' 🇲🇽 1-0
+                                <div class="chat-time">20:23</div>
                             </div>
-                            <div class="message" style="animation-delay: 0.8s">
-                                🟥 RED CARD<br>Mokoena sent off! South Africa down to 10 men.
-                                <div class="message-time">20:47 UTC</div>
+                            <div class="chat-bubble" style="animation-delay: 0.5s">
+                                🟥 Red card: Mokoena sent off! South Africa down to 10 men.
+                                <div class="chat-time">20:47</div>
                             </div>
-                            <div class="message" style="animation-delay: 1.1s">
-                                🏁 FULL TIME ET<br>Mexico win 3-3 (4-3 pens)! What an opening match! 🏆
-                                <div class="message-time">21:45 UTC</div>
+                            <div class="chat-bubble" style="animation-delay: 0.7s">
+                                🏁 Full time ET: Mexico win 3-3 (4-3 pens)! What an opening match! 🏆
+                                <div class="chat-time">21:45</div>
                             </div>
                         </div>
                     </div>
@@ -366,15 +362,19 @@
             </div>
         </section>
         
-        <div class="marquee">
-            <div class="marquee-content">
-                ⚽ WORLD CUP 2026 ⚽ USA CANADA MEXICO ⚽ 104 MATCHES ⚽ 48 TEAMS ⚽ LIVE ALERTS ⚽ AI POWERED ⚽ WORLD CUP 2026 ⚽ USA CANADA MEXICO ⚽ 104 MATCHES ⚽ 48 TEAMS ⚽ LIVE ALERTS ⚽ AI POWERED ⚽
+        <div class="meta">
+            <div class="meta-left">World Cup 2026 ⚽ Send GOAL to +254 715 333 355</div>
+            <div class="meta-right">
+                <div class="meta-item">
+                    <strong>104</strong>
+                    <span>Matches</span>
+                </div>
+                <div class="meta-item">
+                    <strong>&lt;1s</strong>
+                    <span>Latency</span>
+                </div>
             </div>
         </div>
-        
-        <footer class="footer">
-            <p>World Cup 2026 ⚽ Send GOAL to +254 715 333 355</p>
-        </footer>
     </div>
 </body>
 </html>
