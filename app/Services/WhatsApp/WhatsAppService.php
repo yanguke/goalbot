@@ -275,7 +275,7 @@ class WhatsAppService
     protected function handleTextCommand(Subscriber $subscriber, string $text): array
     {
         // Main keyword triggers menu
-        if (str_contains($text, 'goalbot')) {
+        if (str_contains($text, 'goalbot') || str_contains($text, 'goal')) {
             $this->sendMainMenu($subscriber->phone_number);
             return ['status' => 'menu_sent'];
         }
