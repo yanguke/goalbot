@@ -16,6 +16,9 @@ return new class extends Migration
             $table->boolean('notify_all_matches')->default(false);
             $table->string('timezone')->default('UTC');
             $table->timestamp('last_notification_at')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->boolean('demo_mode')->default(false);
+            $table->timestamp('demo_started_at')->nullable();
             $table->timestamps();
         });
     }

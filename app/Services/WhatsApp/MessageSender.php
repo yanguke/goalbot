@@ -137,6 +137,60 @@ class MessageSender
     }
     
     /**
+     * Send interactive buttons message
+     */
+    public function sendInteractiveButtons(string $to, string $header, string $body, string $footer, array $buttons): array
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $this->formatPhoneNumber($to),
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'button',
+                'header' => [
+                    'type' => 'text',
+                    'text' => $header
+                ],
+                'body' => [
+                    'text' => $body
+                ],
+                'footer' => [
+                    'text' => $footer
+                ],
+                'action' => [
+                    'buttons' => $buttons
+                ]
+            ]
+        ];
+        
+        try {
+            $response = $this->client->post("{$this->baseUrl}/messages", [
+                'headers' => [
+                    'Authorization' => "Bearer {$this->accessToken}",
+                    'Content-Type' => 'application/json'
+                ],
+                'json' => $payload
+            ]);
+            
+            return [
+                'success' => true,
+                'data' => json_decode($response->getBody(), true)
+            ];
+        } catch (GuzzleException $e) {
+            Log::error('WhatsApp interactive buttons send failed', [
+                'error' => $e->getMessage(),
+                'to' => $to
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
      * Verify webhook subscription
      */
     public function verifyWebhook(string $verifyToken, string $challenge): ?string
