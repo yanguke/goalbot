@@ -165,20 +165,28 @@ class MessageSender
         ];
         
         try {
-            $response = $this->client->post("{$this->baseUrl}/messages", [
-                'headers' => [
-                    'Authorization' => "Bearer {$this->accessToken}",
-                    'Content-Type' => 'application/json'
-                ],
-                'json' => $payload
+            $response = Http::withToken($this->accessToken)
+                ->post("{$this->apiUrl}/{$this->phoneNumberId}/messages", $payload);
+            
+            if ($response->successful()) {
+                Log::info('WhatsApp interactive buttons sent', ['to' => $to]);
+                return [
+                    'success' => true,
+                    'data' => $response->json()
+                ];
+            }
+            
+            Log::error('WhatsApp interactive buttons failed', [
+                'error' => $response->json(),
+                'to' => $to
             ]);
             
             return [
-                'success' => true,
-                'data' => json_decode($response->getBody(), true)
+                'success' => false,
+                'error' => $response->json()
             ];
-        } catch (GuzzleException $e) {
-            Log::error('WhatsApp interactive buttons send failed', [
+        } catch (\Exception $e) {
+            Log::error('WhatsApp interactive buttons exception', [
                 'error' => $e->getMessage(),
                 'to' => $to
             ]);
