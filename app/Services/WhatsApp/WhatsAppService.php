@@ -190,14 +190,14 @@ class WhatsAppService
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_per_match',
-                        'title' => '10 - Match'
+                        'title' => '49 - Match'
                     ]
                 ],
                 [
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_full',
-                        'title' => '1000 - Full'
+                        'title' => '999 - Full'
                     ]
                 ]
             ];
@@ -266,7 +266,7 @@ class WhatsAppService
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'pay',
-                    'title' => $isKenyan ? '10 - Match' : 'Pay $2.99'
+                    'title' => $isKenyan ? '49 - Match' : 'Pay $0.99'
                 ]
             ]
         ];
@@ -295,10 +295,10 @@ class WhatsAppService
                 $phoneNumber,
                 "💎 *GoalBot Pricing*\n\n" .
                 "*Pay Per Match*\n" .
-                "• KES 10 per match\n" .
+                "• KES 49 per match\n" .
                 "• Full AI commentary\n\n" .
                 "*Full Tournament* 🏆\n" .
-                "• KES 1,000 one-time\n" .
+                "• KES 999 one-time\n" .
                 "• All 104 matches\n\n" .
                 "Reply */pay* for payment instructions."
             );
@@ -309,10 +309,10 @@ class WhatsAppService
             $phoneNumber,
             "💎 *GoalBot Pricing*\n\n" .
             "*Pay Per Match*\n" .
-            "• $2.99 per match\n" .
+            "• $0.99 per match\n" .
             "• Full AI commentary\n\n" .
             "*Full Tournament* 🏆\n" .
-            "• $19.99 one-time\n" .
+            "• $9.99 one-time\n" .
             "• All 104 matches\n\n" .
             "Reply */pay* for payment instructions."
         );
@@ -338,8 +338,8 @@ class WhatsAppService
             "Complete your subscription securely:\n" .
             "👉 https://goalbot.devs.mobi/pay?ref=" . urlencode($phoneNumber) . "\n\n" .
             "*Options:*\n" .
-            "• $2.99 per match (~€2.75 / ~£2.35)\n" .
-            "• $19.99 full tournament (~€18.50 / ~£15.75)\n\n" .
+            "• $0.99 per match (~€0.90 / ~£0.78)\n" .
+            "• $9.99 full tournament (~€9.20 / ~£7.85)\n\n" .
             "Payments processed securely via Stripe."
         );
     }
@@ -365,8 +365,8 @@ class WhatsAppService
                 "2. Select Lipa na M-Pesa\n" .
                 "3. Select Buy Goods and Services\n" .
                 "4. Enter Till Number: *123456*\n" .
-                "5. Amount: KES 10 per match\n" .
-                "   or KES 1,000 full tournament\n" .
+                "5. Amount: KES 49 per match\n" .
+                "   or KES 999 full tournament\n" .
                 "6. Confirm with PIN\n\n" .
                 "Reply with screenshot after payment."
             );
@@ -436,7 +436,7 @@ class WhatsAppService
                 "⚠️ *Payment Request Failed*\n\n" .
                 "Please try manual payment:\n" .
                 "Till Number: *123456*\n" .
-                "Amount: KES 10\n\n" .
+                "Amount: KES {$amount}\n\n" .
                 "Reply with screenshot after payment."
             );
             
@@ -451,7 +451,7 @@ class WhatsAppService
                 "⚠️ *Payment System Busy*\n\n" .
                 "Please use manual M-Pesa:\n" .
                 "Till Number: *123456*\n" .
-                "Amount: KES 10\n\n" .
+                "Amount: KES {$amount}\n\n" .
                 "Reply with screenshot after payment."
             );
         }
