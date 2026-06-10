@@ -190,14 +190,14 @@ class WhatsAppService
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_per_match',
-                        'title' => '💳 KES 10 - Match'
+                        'title' => '10 - Match'
                     ]
                 ],
                 [
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_full',
-                        'title' => '💳 KES 1000 - Full'
+                        'title' => '1000 - Full'
                     ]
                 ]
             ];
@@ -266,7 +266,7 @@ class WhatsAppService
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'pay',
-                    'title' => $isKenyan ? '💳 KES 10 - Match' : '💳 Pay $2.99'
+                    'title' => $isKenyan ? '10 - Match' : 'Pay $2.99'
                 ]
             ]
         ];
