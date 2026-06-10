@@ -403,7 +403,7 @@ class WhatsAppService
                     'BusinessShortCode' => $shortcode,
                     'Password' => $password,
                     'Timestamp' => $timestamp,
-                    'TransactionType' => 'CustomerBuyGoodsOnline',
+                    'TransactionType' => 'CustomerPayBillOnline',
                     'Amount' => 10, // KES 10 per match (test amount)
                     'PartyA' => $formattedPhone,
                     'PartyB' => $shortcode,
@@ -517,7 +517,7 @@ class WhatsAppService
                     'BusinessShortCode' => $shortcode,
                     'Password' => $password,
                     'Timestamp' => $timestamp,
-                    'TransactionType' => 'CustomerBuyGoodsOnline',
+                    'TransactionType' => 'CustomerPayBillOnline',
                     'Amount' => $amount,
                     'PartyA' => $formattedPhone,
                     'PartyB' => $shortcode,
