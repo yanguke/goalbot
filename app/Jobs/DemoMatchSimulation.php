@@ -29,28 +29,28 @@ class DemoMatchSimulation implements ShouldQueue
             'emoji' => '⏰',
             'type' => 'upcoming',
             'title' => 'Match Starting Soon',
-            'message' => 'Argentina 🇦🇷 vs France 🇫🇷 kicks off in 60 minutes!\n\n📍 Estadio Azteca, Mexico City\n🏆 World Cup 2026 Final\n\nLineups will be available 30 minutes before kickoff.'
+            'message' => "Mexico �� vs South Africa �� kicks off in 60 minutes!\n\n📍 Estadio Azteca, Mexico City\n🏆 World Cup 2026 Opening Match\n\nLineups will be available 30 minutes before kickoff."
         ],
         [
             'minute' => -30,
             'emoji' => '📋',
             'type' => 'lineup',
             'title' => 'Lineups Available',
-            'message' => '*Starting XI*\n\n🇦🇷 Argentina:\nMartinez; Molina, Romero, Otamendi, Tagliafico; De Paul, Fernandez, Mac Allister; Messi, Alvarez, Di Maria\n\n🇫🇷 France:\nMaignan; Kounde, Upamecano, Konate, Hernandez; Tchouameni, Rabiot; Dembele, Griezmann, Mbappe; Thuram\n\n🔄 Both teams at full strength!'
+            'message' => "*Starting XI*\n\n�� Mexico:\nOchoa; Araujo, Montes, Vasquez, Gallardo; Alvarez, Herrera, Chavez; Lozano, Jimenez, Antuna\n\n�� South Africa:\nWilliams; Mobbie, Xulu, Mvala, Mashego; Mokoena, Sithole; Zwane, Tau, Mayambela; Foster\n\n🔄 Both teams at full strength!"
         ],
         [
             'minute' => -10,
             'emoji' => '🔥',
             'type' => 'warmup',
             'title' => 'Players Warming Up',
-            'message' => 'Players are on the pitch warming up!\n\n⚽ Messi and Mbappe both looking focused\n📊 Weather: 24°C, clear skies\n👥 Stadium at 98% capacity (105,000 fans)\n\n*Kickoff in 10 minutes* 🕒'
+            'message' => "Players are on the pitch warming up!\n\n⚽ Lozano and Tau looking sharp\n📊 Weather: 24°C, clear skies\n👥 Stadium at 105,000 capacity\n\n*Kickoff in 10 minutes* 🕒"
         ],
         [
             'minute' => 0,
             'emoji' => '🔴',
             'type' => 'kickoff',
             'title' => 'KICKOFF!',
-            'message' => '*The World Cup 2026 Final is LIVE!* 🏆\n\nArgentina 🇦🇷 0-0 🇫🇷 France\n\n🎙️ "The biggest match in world football begins. 1.5 billion people watching. History awaits one of these greats."\n\n*1st minute* ⏱️'
+            'message' => "*The World Cup 2026 is LIVE!* 🏆\n\nMexico �� 0-0 �� South Africa\n\n🎙️ \"The greatest show on earth begins! Mexico hosts the opener at the iconic Estadio Azteca.\"\n\n*1st minute* ⏱️"
         ],
         [
             'minute' => 12,
@@ -64,56 +64,56 @@ class DemoMatchSimulation implements ShouldQueue
             'emoji' => '⚽',
             'type' => 'goal',
             'title' => '23\' - GOAL!',
-            'message' => '*GOAL! ARGENTINA 1-0!* ⚽🐐\n\n🇦🇷 MESSI SCORES!\n\n🎯 Magical free-kick curls over the wall and into the top corner!\n\n📊 His 8th World Cup goal - now TIED with Ronaldo for most all-time!\n📈 Argentina dominant in possession (62%)\n\n*Argentina 🇦🇷 1-0 🇫🇷 France*'
+            'message' => '*GOAL! ARGENTINA 1-0!* ⚽🐐\n\n🇲🇽 LOZANO SCORES!\n\n🎯 Magical free-kick curls over the wall and into the top corner!\n\n📊 His 8th World Cup goal - now TIED with Ronaldo for most all-time!\n📈 Argentina dominant in possession (62%)\n\n*Mexico 🇲🇽 1-0 🇿🇦 South Africa*'
         ],
         [
             'minute' => 31,
             'emoji' => '🛑',
             'type' => 'yellow',
             'title' => '31\' - Yellow Card',
-            'message' => '🟨 Yellow Card\n\n🇫🇷 Tchouameni booked for a late challenge on Messi\n\n*France struggling to contain the Argentine midfield*'
+            'message' => '🟨 Yellow Card\n\n🇿🇦 Sithole booked for a late challenge on Messi\n\n*France struggling to contain the Argentine midfield*'
         ],
         [
             'minute' => 38,
             'emoji' => '⚽',
             'type' => 'goal',
             'title' => '38\' - EQUALIZER!',
-            'message' => '*GOAL! FRANCE 1-1!* ⚽\n\n🇫🇷 MBAPPE EQUALIZES!\n\n💨 Lightning counter-attack! Dembele crosses, Mbappe smashes home from 8 yards\n\n🔄 Game on! France back in it\n\n*Argentina 🇦🇷 1-1 🇫🇷 France*'
+            'message' => '*GOAL! FRANCE 1-1!* ⚽\n\n🇿🇦 TAU EQUALIZES!\n\n💨 Lightning counter-attack! Dembele crosses, Mbappe smashes home from 8 yards\n\n🔄 Game on! France back in it\n\n*Mexico 🇲🇽 1-1 🇿🇦 South Africa*'
         ],
         [
             'minute' => 45,
             'emoji' => '⏱️',
             'type' => 'halftime',
             'title' => 'HALF TIME',
-            'message' => '*HALF TIME* ⏱️\n\n🇦🇷 Argentina 1-1 France 🇫🇷\n\n⚽ Goals: Messi (23\'), Mbappe (38\')\n\n📊 Stats:\n• Possession: 58%-42%\n• Shots: 8-6\n• xG: 0.85-0.72\n\n🔥 Intense first half! What a final this is!\n\n*Second half in 15 minutes*'
+            'message' => '*HALF TIME* ⏱️\n\n🇲🇽 Mexico 1-1 France 🇫🇷\n\n⚽ Goals: Messi (23\'), Mbappe (38\')\n\n📊 Stats:\n• Possession: 58%-42%\n• Shots: 8-6\n• xG: 0.85-0.72\n\n🔥 Intense first half! What a final this is!\n\n*Second half in 15 minutes*'
         ],
         [
             'minute' => 60,
             'emoji' => '🔁',
             'type' => 'substitution',
             'title' => '60\' - Substitutions',
-            'message' => '🔄 Double Sub\n\n🇦🇷 Argentina: Lautaro Martinez ⬆️ replaces Alvarez ⬇️\n🇫🇷 France: Camavinga ⬆️ replaces Rabiot ⬇️\n\nBoth managers looking for fresh legs in midfield\n\n*Argentina 🇦🇷 1-1 🇫🇷 France*'
+            'message' => '🔄 Double Sub\n\n🇲🇽 Mexico: Lautaro Martinez ⬆️ replaces Alvarez ⬇️\n🇿🇦 South Africa: Camavinga ⬆️ replaces Rabiot ⬇️\n\nBoth managers looking for fresh legs in midfield\n\n*Mexico 🇲🇽 1-1 🇿🇦 South Africa*'
         ],
         [
             'minute' => 67,
             'emoji' => '🟥',
             'type' => 'redcard',
             'title' => '67\' - RED CARD!',
-            'message' => '*RED CARD!* 🟥\n\n🇫🇷 Griezmann sent off!\n\n🛑 Professional foul on De Paul as last man - clear denial of goal-scoring opportunity\n\n📊 France down to 10 men with 23 minutes + stoppage remaining!\n\n*Argentina 🇦🇷 1-1 🇫🇷 France*'
+            'message' => '*RED CARD!* 🟥\n\n🇿🇦 Mokoena sent off!\n\n🛑 Professional foul on De Paul as last man - clear denial of goal-scoring opportunity\n\n📊 France down to 10 men with 23 minutes + stoppage remaining!\n\n*Mexico 🇲🇽 1-1 🇿🇦 South Africa*'
         ],
         [
             'minute' => 75,
             'emoji' => '⚽',
             'type' => 'goal',
             'title' => '75\' - GOAL!',
-            'message' => '*GOAL! ARGENTINA 2-1!* ⚽\n\n🇦🇷 LAUTARO MARTINEZ!\n\n🎯 Just 15 minutes after coming on! Messi assist, clinical finish past Maignan\n\n📊 Griezmann red proves costly!\n\n*Argentina 🇦🇷 2-1 🇫🇷 France*'
+            'message' => '*GOAL! ARGENTINA 2-1!* ⚽\n\n🇲🇽 JIMENEZ!\n\n🎯 Just 15 minutes after coming on! Messi assist, clinical finish past Maignan\n\n📊 Griezmann red proves costly!\n\n*Mexico 🇲🇽 2-1 🇿🇦 South Africa*'
         ],
         [
             'minute' => 82,
             'emoji' => '⚽',
             'type' => 'goal',
             'title' => '82\' - UNBELIEVABLE!',
-            'message' => '*GOAL! FRANCE 2-2!* ⚽😱\n\n🇫🇷 MBAPPE AGAIN! BRACE!\n\n💨 Solo run from halfway line! Beats 3 defenders, fires into bottom corner\n\n🔥 10-man France refuse to give up!\n\n📊 Mbappe: 2 goals, 5 dribbles completed\n\n*Argentina 🇦🇷 2-2 🇫🇷 France*'
+            'message' => '*GOAL! FRANCE 2-2!* ⚽😱\n\n🇿🇦 TAU AGAIN! BRACE!\n\n💨 Solo run from halfway line! Beats 3 defenders, fires into bottom corner\n\n🔥 10-man France refuse to give up!\n\n📊 Mbappe: 2 goals, 5 dribbles completed\n\n*Mexico 🇲🇽 2-2 🇿🇦 South Africa*'
         ],
         [
             'minute' => 90,
@@ -127,7 +127,7 @@ class DemoMatchSimulation implements ShouldQueue
             'emoji' => '⚽',
             'type' => 'goal',
             'title' => "105' - HAT-TRICK!",
-            'message' => "*GOAL! ARGENTINA 3-2!* ⚽🐐\n\n🇦🇷 MESSI COMPLETES HAT-TRICK!\n\n🎯 Rebounds after Maignan saves Lautaro shot, taps into empty net\n\n📊 Messi: 3 goals in a World Cup final!\n📈 First player to score 3+ in final since 1966\n\n*Argentina 🇦🇷 3-2 🇫🇷 France*\""
+            'message' => "*GOAL! ARGENTINA 3-2!* ⚽🐐\n\n🇲🇽 LOZANO COMPLETES HAT-TRICK!\n\n🎯 Rebounds after Maignan saves Lautaro shot, taps into empty net\n\n📊 Messi: 3 goals in a World Cup final!\n📈 First player to score 3+ in final since 1966\n\n*Mexico 🇲🇽 3-2 🇿🇦 South Africa*\""
         ],
         [
             'minute' => 120,
