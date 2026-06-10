@@ -165,9 +165,50 @@ class WhatsAppService
     }
     
     /**
-     * Handle subscription
+     * Handle subscription - show confirmation preview
      */
     public function subscribeUser(Subscriber $subscriber): bool
+    {
+        $cleanNumber = preg_replace('/[^0-9]/', '', $subscriber->phone_number);
+        $isKenyan = str_starts_with($cleanNumber, '254');
+        
+        $header = "⚽ GoalBot Subscription";
+        $body = "You're about to subscribe to AI-powered World Cup 2026 alerts:\n\n" .
+                "📱 *What you will receive:*\n" .
+                "• Goals & match events\n" .
+                "• Red cards & penalties\n" .
+                "• Match reminders\n" .
+                "• Half-time & full-time scores\n\n" .
+                ($isKenyan 
+                    ? "💰 *Cost:* KES 10 per match or KES 1,000 full tournament" 
+                    : "💰 *Cost:* $2.99 per match or $19.99 full tournament");
+        $footer = "Tap Continue to proceed 👇";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'confirm_subscribe',
+                    'title' => '✅ Continue'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $subscriber->phone_number,
+            $header,
+            $body,
+            $footer,
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
+    }
+    
+    /**
+     * Confirm subscription and activate
+     */
+    public function confirmSubscription(Subscriber $subscriber): bool
     {
         $subscriber->update([
             'is_active' => true,
@@ -180,13 +221,14 @@ class WhatsAppService
         $cleanNumber = preg_replace('/[^0-9]/', '', $subscriber->phone_number);
         $isKenyan = str_starts_with($cleanNumber, '254');
         
-        $header = "✅ You're subscribed!";
-        $body = "You'll receive AI-powered alerts for:\n" .
+        $header = "✅ Subscription Confirmed!";
+        $body = "You're now subscribed to GoalBot!\n\n" .
+                "📱 *Your alerts include:*\n" .
                 "• Goals & match events\n" .
                 "• Red cards & penalties\n" .
                 "• Match reminders\n" .
                 "• Half-time & full-time scores\n\n" .
-                ($isKenyan ? "Complete payment to activate alerts." : "Complete payment to activate alerts.");
+                "Complete payment to activate full access.";
         $footer = "World Cup 2026 begins June 11, 2026 🏆";
         
         $buttons = [
@@ -432,6 +474,10 @@ class WhatsAppService
                 
             case 'subscribe':
                 $this->subscribeUser($subscriber);
+                return ['status' => 'subscribe_preview_sent'];
+                
+            case 'confirm_subscribe':
+                $this->confirmSubscription($subscriber);
                 return ['status' => 'subscribed'];
                 
             case 'pricing':
