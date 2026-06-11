@@ -26,19 +26,27 @@ class PollMatches extends Command
         MessageSender $whatsapp
     ): int {
         $this->info('Polling matches...');
-        
-        // Get today's date
+
         $today = now()->format('Y-m-d');
-        
-        // Fetch matches for today
-        $matches = $football->getMatchesForDate($today);
-        
+
+        // Merge today's scheduled matches with live matches endpoint
+        // (date endpoint can lag and still show NS even after kickoff)
+        $todayMatches = $football->getMatchesForDate($today);
+        $liveMatches  = $football->getLiveMatches();
+
+        // Merge, keyed by fixture ID so live version overwrites stale NS version
+        $merged = collect($todayMatches)->keyBy(fn($m) => $m['fixture']['id']);
+        foreach ($liveMatches as $live) {
+            $merged->put($live['fixture']['id'], $live);
+        }
+        $matches = $merged->values()->toArray();
+
         if (empty($matches)) {
             $this->warn("No matches found for {$today}");
             return self::SUCCESS;
         }
-        
-        $this->info("Found " . count($matches) . " matches for today");
+
+        $this->info("Found " . count($matches) . " matches for today (" . count($liveMatches) . " live)");
         
         foreach ($matches as $match) {
             $this->processMatch($match, $detector, $ai, $whatsapp);
