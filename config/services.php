@@ -56,7 +56,13 @@ return [
         'webhook_secret' => env('WHATSAPP_WEBHOOK_SECRET'),
     ],
 
-    // OpenAI for message generation
+    // Anthropic Claude for message generation
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-3-5-haiku-20241022'),
+    ],
+
+    // OpenAI for message generation (legacy fallback)
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),

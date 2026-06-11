@@ -13,8 +13,8 @@ class AIMessageGenerator
     
     public function __construct()
     {
-        $this->apiKey = config('services.openai.key');
-        $this->model = config('services.openai.model', 'gpt-4o-mini');
+        $this->apiKey = config('services.anthropic.key') ?? '';
+        $this->model = config('services.anthropic.model', 'claude-3-5-haiku-20241022');
     }
     
     /**
@@ -56,13 +56,13 @@ Rules:
 - Don't use the word "Match", use "game" or the team names
 PROMPT;
 
-        return $this->callOpenAI($prompt, 100);
+        return $this->callClaude($prompt, 100);
     }
     
     private function callAI(string $eventType, array $data, ?string $userTeam): string
     {
         $prompt = $this->buildPrompt($eventType, $data, $userTeam);
-        return $this->callOpenAI($prompt, 150);
+        return $this->callClaude($prompt, 150);
     }
     
     private function buildPrompt(string $type, array $data, ?string $userTeam): string
@@ -99,46 +99,44 @@ PROMPT;
         return "Generate a WhatsApp message for a World Cup {$type} event with data: " . json_encode($data);
     }
     
-    private function callOpenAI(string $prompt, int $maxTokens): string
+    private function callClaude(string $prompt, int $maxTokens): string
     {
-        if (empty($this->apiKey) || $this->apiKey === 'your-api-key-here') {
-            Log::warning('OpenAI API key not configured, using fallback');
+        if (empty($this->apiKey)) {
+            Log::warning('Claude API key not configured, using fallback');
             return $this->fallbackMessage($prompt);
         }
         
         try {
             $response = Http::timeout(10)->withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
+                'x-api-key' => $this->apiKey,
+                'anthropic-version' => '2023-06-01',
                 'Content-Type' => 'application/json',
-            ])->post('https://api.openai.com/v1/chat/completions', [
+            ])->post('https://api.anthropic.com/v1/messages', [
                 'model' => $this->model,
+                'max_tokens' => $maxTokens,
+                'system' => 'You are GoalBot, a concise WhatsApp notification bot for World Cup 2026. You generate short, energetic, emoji-enhanced messages. Always stay under 250 characters. Output only the message, no preamble.',
                 'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'You are GoalBot, a concise WhatsApp notification bot for World Cup 2026. You generate short, energetic, emoji-enhanced messages. Always stay under 250 characters.'
-                    ],
                     [
                         'role' => 'user',
                         'content' => $prompt
                     ]
                 ],
                 'temperature' => 0.8,
-                'max_tokens' => $maxTokens,
             ]);
             
             if ($response->successful()) {
-                return $response->json('choices.0.message.content', 'GoalBot update! ⚽');
+                return trim($response->json('content.0.text', 'GoalBot update! ⚽'));
             }
             
-            Log::error('OpenAI API error', [
+            Log::error('Claude API error', [
                 'status' => $response->status(),
-                'error' => $response->json('error.message'),
+                'error' => $response->json('error.message') ?? $response->body(),
             ]);
             
             return $this->fallbackMessage($prompt);
             
         } catch (\Exception $e) {
-            Log::error('OpenAI exception', ['error' => $e->getMessage()]);
+            Log::error('Claude exception', ['error' => $e->getMessage()]);
             return $this->fallbackMessage($prompt);
         }
     }
