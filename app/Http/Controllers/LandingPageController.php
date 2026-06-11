@@ -67,7 +67,7 @@ class LandingPageController extends Controller
 
         // Store visit ID in a cookie for attribution (no token in the WA message)
         $phone = config('services.whatsapp.phone_number', '254715333355');
-        $msg   = 'Hi';
+        $msg   = 'Goal';
         $url   = "https://wa.me/{$phone}?text=" . urlencode($msg);
 
         $response = redirect()->away($url, 302);
