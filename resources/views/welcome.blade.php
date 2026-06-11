@@ -40,21 +40,29 @@
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     {{-- Structured data for Google --}}
+    @php($siteUrl = url('/'))
     <script type="application/ld+json">
+    @verbatim
     {
       "@context": "https://schema.org",
       "@type": "Service",
       "name": "GoalBot",
       "description": "Live World Cup 2026 alerts delivered on WhatsApp — goals, red cards, AI commentary and match predictions.",
-      "provider": { "@type": "Organization", "name": "GoalBot", "url": "{{ url('/') }}" },
       "areaServed": ["KE", "Worldwide"],
       "offers": {
         "@type": "Offer",
         "price": "49",
         "priceCurrency": "KES",
         "description": "24-hour access to live World Cup 2026 alerts on WhatsApp"
-      }
+      },
+      "provider": { "@type": "Organization", "name": "GoalBot", "url": "__SITE_URL__" }
     }
+    @endverbatim
+    </script>
+    <script>
+      // Inject site URL into JSON-LD after Blade rendering
+      document.currentScript.previousElementSibling.textContent =
+        document.currentScript.previousElementSibling.textContent.replace('__SITE_URL__', '{{ $siteUrl }}');
     </script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
