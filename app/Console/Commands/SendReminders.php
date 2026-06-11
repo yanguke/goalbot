@@ -24,36 +24,38 @@ class SendReminders extends Command
     ): int {
         $this->info('Checking for upcoming matches...');
 
-        // Send reminders for matches starting in 60–75 min OR 115–125 min from now
-        // Running every 5 min — these windows ensure each match gets exactly one reminder at each milestone
+        // Reminder windows — running every 5 min, each window is wider than the interval
+        // to guarantee every match gets exactly one notification per milestone
         $windows = [
-            ['label' => '1 hour',  'from' => now()->addMinutes(60),  'to' => now()->addMinutes(75)],
-            ['label' => '2 hours', 'from' => now()->addMinutes(115), 'to' => now()->addMinutes(125)],
+            ['label' => '10 minutes', 'from' => now()->addMinutes(10), 'to' => now()->addMinutes(16)],
+            ['label' => '15 minutes', 'from' => now()->addMinutes(15), 'to' => now()->addMinutes(21)],
+            ['label' => '1 hour',     'from' => now()->addMinutes(60), 'to' => now()->addMinutes(75)],
+            ['label' => '2 hours',    'from' => now()->addMinutes(115),'to' => now()->addMinutes(125)],
         ];
 
-        $matches = [];
-        $windowLabel = '1 hour';
+        $anyFound = false;
         foreach ($windows as $window) {
             $found = $football->getMatchesStartingBetween(
                 $window['from']->toIso8601String(),
                 $window['to']->toIso8601String()
             );
-            if (!empty($found)) {
-                $matches = $found;
-                $windowLabel = $window['label'];
-                break;
+            if (empty($found)) continue;
+
+            foreach ($found as $match) {
+                $matchId = $match['fixture']['id'];
+                $cacheKey = "reminder_{$matchId}_{$window['label']}";
+                if (\Cache::has($cacheKey)) continue; // already sent this milestone
+                \Cache::put($cacheKey, true, now()->addHours(6));
+
+                $anyFound = true;
+                $this->info("Match in ~{$window['label']}: {$match['teams']['home']['name']} vs {$match['teams']['away']['name']}");
+                $this->sendRemindersForMatch($match, $ai, $whatsapp, $window['label']);
             }
         }
 
-        if (empty($matches)) {
-            $this->warn("No matches starting in ~1 or ~2 hours");
+        if (!$anyFound) {
+            $this->warn("No upcoming matches in any reminder window");
             return self::SUCCESS;
-        }
-        
-        $this->info("Found " . count($matches) . " match(es) starting in ~2 hours");
-        
-        foreach ($matches as $match) {
-            $this->sendRemindersForMatch($match, $ai, $whatsapp);
         }
         
         $this->info("Sent {$this->reminderCount} reminders");
@@ -64,7 +66,8 @@ class SendReminders extends Command
     private function sendRemindersForMatch(
         array $match,
         AIMessageGenerator $ai,
-        MessageSender $whatsapp
+        MessageSender $whatsapp,
+        string $windowLabel = '1 hour'
     ): void {
         $homeTeam = $match['teams']['home']['name'];
         $awayTeam = $match['teams']['away']['name'];
@@ -92,9 +95,15 @@ class SendReminders extends Command
         
         foreach ($subscribers as $subscriber) {
             try {
-                $personalizedReminder = $subscriber->favorite_team
+                $base = $subscriber->favorite_team
                     ? $this->personalizeReminder($reminder, $subscriber->favorite_team, $homeTeam, $awayTeam)
                     : $reminder;
+
+                // Prepend urgency header for short windows
+                $urgencyPrefix = in_array($windowLabel, ['10 minutes', '15 minutes'])
+                    ? "⏰ *{$homeTeam} vs {$awayTeam} kicks off in {$windowLabel}!*\n\n"
+                    : '';
+                $personalizedReminder = $urgencyPrefix . $base;
 
                 $whatsapp->sendAlert($subscriber->phone_number, $personalizedReminder);
                 usleep(200000);
