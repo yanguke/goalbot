@@ -305,8 +305,11 @@
                 <p class="subtitle"><strong>AI-powered commentary</strong> with context and personality. Not just scores—insights, stats, and storytelling.</p>
                 
                 <div class="pricing">
-                    <div class="price">$2.99 <span>/ match</span></div>
-                    <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">or $19.99 full tournament</div>
+                    <div class="price">{{ $pricing['per_match_label'] ?? '$0.99' }} <span>/ match</span></div>
+                    <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">or {{ $pricing['full_label'] ?? '$9.99' }} full tournament</div>
+                    @if(!empty($pricing['is_kenya']))
+                        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #4ade80;">🇰🇪 M-Pesa supported</div>
+                    @endif
                 </div>
                 
                 <a href="https://wa.me/254715333355?text=goal" class="cta">
