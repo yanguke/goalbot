@@ -76,30 +76,25 @@ class LiveScoreCommentaryService
     ];
 
     /**
-     * Notable commentary NOT covered by the event detector — big chances, post hits, offsides, dangerous moments
+     * Noisy low-value entries to suppress (routine ball movement).
      */
-    private array $notableKeywords = [
-        'post!',
-        'crossbar',
-        'offside',
-        'great save',
-        'saves',
-        'chance',
-        'dangerous',
-        'shoots',
-        'almost',
-        'nearly',
-        'header',
-        'free kick',
-        'corner',
-        'own goal',   // sometimes commentary describes before API updates
-        'video review',
+    private array $suppressKeywords = [
+        'take a throw-in',
+        'goal kick for',
+        'are in control of the ball',
+        'are trying to create something',
+        'ball possession:',
+        'relieves the pressure with a clearance',
+        'intercepts a cross',
+        'makes the tackle and wins possession',
+        'successfully finds a teammate',
     ];
 
     /**
-     * Get notable commentary entries NOT already covered by the event detector.
+     * Get all commentary NOT covered by the event detector and NOT routine noise.
+     * This sends every meaningful moment — fouls, chances, shots, corners, subs etc.
      */
-    public function getHighlights(string $matchSlug, int $limit = 10): array
+    public function getHighlights(string $matchSlug, int $limit = 50): array
     {
         $entries = $this->getCommentary($matchSlug);
 
@@ -107,17 +102,17 @@ class LiveScoreCommentaryService
             ->filter(function ($c) {
                 $text = strtolower($c['text']);
 
-                // Skip anything the event detector already handles
+                // Skip events the API-Football detector already broadcasts
                 foreach ($this->coveredByDetector as $kw) {
                     if (str_contains($text, $kw)) return false;
                 }
 
-                // Only keep genuinely notable moments
-                foreach ($this->notableKeywords as $kw) {
-                    if (str_contains($text, $kw)) return true;
+                // Skip routine low-value noise
+                foreach ($this->suppressKeywords as $kw) {
+                    if (str_contains($text, $kw)) return false;
                 }
 
-                return false;
+                return true;
             })
             ->take($limit)
             ->values()
