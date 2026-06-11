@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LandingVisit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,8 @@ class LandingPageController extends Controller
 {
     public function index(Request $request)
     {
+        $this->recordVisit($request, 'view');
+
         $version = $request->query('v', '1');
 
         $view = match($version) {
@@ -52,6 +55,50 @@ class LandingPageController extends Controller
         ]);
 
         return view($view, compact('pricing', 'country', 'isKenya'));
+    }
+
+    /**
+     * Tracked outbound click to WhatsApp.
+     * Usage: /go?utm_source=tiktok&utm_campaign=launch
+     */
+    public function click(Request $request)
+    {
+        $visit = $this->recordVisit($request, 'cta_click');
+
+        $base = $request->query('text', 'goal');
+        // Append attribution token (e.g. "goal r=123") so webhook can attribute
+        $msg = $visit ? "{$base} r={$visit->id}" : $base;
+        $phone = config('services.whatsapp.phone_number', '254715333355');
+        $url = "https://wa.me/{$phone}?text=" . urlencode($msg);
+
+        return redirect()->away($url, 302);
+    }
+
+    /**
+     * Persist a landing-page event (view or CTA click) with UTMs and geo.
+     */
+    private function recordVisit(Request $request, string $event): ?LandingVisit
+    {
+        try {
+            $country = $this->detectCountry($request);
+
+            return LandingVisit::create([
+                'ip' => $request->ip(),
+                'country' => $country !== 'XX' ? $country : null,
+                'user_agent' => substr((string) $request->userAgent(), 0, 500),
+                'referrer' => substr((string) $request->headers->get('referer'), 0, 500) ?: null,
+                'version' => (string) $request->query('v', '1'),
+                'utm_source' => $request->query('utm_source'),
+                'utm_medium' => $request->query('utm_medium'),
+                'utm_campaign' => $request->query('utm_campaign'),
+                'utm_term' => $request->query('utm_term'),
+                'utm_content' => $request->query('utm_content'),
+                'event' => $event,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Landing visit log failed', ['error' => $e->getMessage()]);
+            return null;
+        }
     }
 
     /**

@@ -55,15 +55,32 @@ class WhatsAppController extends Controller
     {
         // Normalize phone number
         $cleanNumber = $this->normalizePhoneNumber($phoneNumber);
-        
+
+        // Extract attribution token "r=123" from prefilled CTA message (best-effort)
+        $attribution = [];
+        if (preg_match('/\br=(\d+)\b/', $message, $m)) {
+            $visit = \App\Models\LandingVisit::find((int) $m[1]);
+            if ($visit) {
+                $attribution = [
+                    'utm_source' => $visit->utm_source,
+                    'utm_medium' => $visit->utm_medium,
+                    'utm_campaign' => $visit->utm_campaign,
+                    'utm_term' => $visit->utm_term,
+                    'utm_content' => $visit->utm_content,
+                    'attribution_ip' => $visit->ip,
+                    'country' => $visit->country,
+                ];
+            }
+        }
+
         // Find or create subscriber
         $subscriber = Subscriber::firstOrCreate(
             ['phone_number' => $cleanNumber],
-            [
+            array_merge([
                 'notifications_enabled' => true,
                 'notify_all_matches' => false,
                 'timezone' => 'UTC',
-            ]
+            ], $attribution)
         );
         
         Log::info('Subscriber interaction', [

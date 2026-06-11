@@ -20,6 +20,13 @@ class Subscriber extends Model
         'is_active',
         'demo_mode',
         'demo_started_at',
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_term',
+        'utm_content',
+        'attribution_ip',
+        'country',
     ];
 
     protected $casts = [
