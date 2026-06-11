@@ -59,7 +59,7 @@ return [
     // Anthropic Claude for message generation
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
-        'model' => env('ANTHROPIC_MODEL', 'claude-3-5-haiku-20241022'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5'),
         'qa_enabled' => env('AI_QA_ENABLED', true),
     ],
 

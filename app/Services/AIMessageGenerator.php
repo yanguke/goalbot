@@ -14,7 +14,7 @@ class AIMessageGenerator
     public function __construct()
     {
         $this->apiKey = config('services.anthropic.key') ?? '';
-        $this->model = config('services.anthropic.model', 'claude-3-5-haiku-20241022');
+        $this->model = config('services.anthropic.model', 'claude-haiku-4-5');
     }
     
     /**

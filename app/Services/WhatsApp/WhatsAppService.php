@@ -736,7 +736,7 @@ class WhatsAppService
                 'anthropic-version' => '2023-06-01',
                 'Content-Type' => 'application/json',
             ])->post('https://api.anthropic.com/v1/messages', [
-                'model' => config('services.anthropic.model', 'claude-3-5-haiku-20241022'),
+                'model' => config('services.anthropic.model', 'claude-haiku-4-5'),
                 'max_tokens' => 400,
                 'system' => $systemPrompt,
                 'messages' => [
