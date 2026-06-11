@@ -673,12 +673,91 @@ class WhatsAppService
         }
         
         // Direct commands
-        return match ($text) {
+        $textLower = strtolower(trim($text));
+        return match ($textLower) {
             'demo' => $this->startDemo($subscriber) ? ['status' => 'demo_started'] : ['status' => 'demo_failed'],
             'subscribe', 'opt in', 'join' => $this->subscribeUser($subscriber) ? ['status' => 'subscribed'] : ['status' => 'subscribe_failed'],
             'pricing', 'price' => $this->sendPricing($subscriber->phone_number) ? ['status' => 'pricing_sent'] : ['status' => 'pricing_failed'],
             'pay', '/pay' => $this->processPayment($subscriber->phone_number) ? ['status' => 'payment_initiated'] : ['status' => 'payment_failed'],
-            default => $this->sendWelcome($subscriber->phone_number) ? ['status' => 'welcome_sent'] : ['status' => 'welcome_failed'],
+            'menu', 'help', 'hi', 'hello', 'start' => $this->sendMainMenu($subscriber->phone_number) ? ['status' => 'menu_sent'] : ['status' => 'menu_failed'],
+            default => config('services.anthropic.qa_enabled', true)
+                ? $this->handleAIQuestion($subscriber, $text)
+                : ($this->sendWelcome($subscriber->phone_number) ? ['status' => 'welcome_sent'] : ['status' => 'welcome_failed']),
         };
+    }
+
+    /**
+     * Handle free-form questions about World Cup using Claude AI
+     */
+    protected function handleAIQuestion(Subscriber $subscriber, string $question): array
+    {
+        $answer = $this->askClaude($question);
+        $this->sendText($subscriber->phone_number, $answer);
+        return ['status' => 'ai_answered'];
+    }
+
+    /**
+     * Ask Claude a World Cup question (RAG: includes live fixtures context)
+     */
+    protected function askClaude(string $question): string
+    {
+        $apiKey = config('services.anthropic.key');
+
+        if (empty($apiKey)) {
+            return "⚽ Hi! Reply *menu* to see options, or *demo* to try it out!";
+        }
+
+        // Build RAG context from live fixture data
+        $fixturesContext = '';
+        try {
+            $football = app(\App\Services\Football\FootballDataService::class);
+            $fixturesContext = $football->buildFixturesContext();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('RAG context unavailable', ['error' => $e->getMessage()]);
+        }
+
+        $systemPrompt = "You are GoalBot, a friendly WhatsApp assistant specialized in FIFA World Cup 2026. " .
+            "Answer questions about teams, players, fixtures, history, predictions, and football in general. " .
+            "\n\nLIVE TOURNAMENT DATA (use this to answer questions about fixtures, schedules, scores, status):\n" .
+            $fixturesContext .
+            "\n\nRules:\n" .
+            "- ALWAYS prioritize the LIVE TOURNAMENT DATA above when answering schedule, score, or fixture questions\n" .
+            "- Convert UTC times to local context when helpful (Kenya is UTC+3, Mexico City is UTC-6)\n" .
+            "- Keep replies under 600 characters (WhatsApp friendly)\n" .
+            "- Use 1-3 emojis (⚽ 🏆 🔥 🥅)\n" .
+            "- Be conversational and energetic\n" .
+            "- If the data doesn't have the answer, say so honestly\n" .
+            "- For non-football questions, politely redirect to football topics\n" .
+            "- End with a follow-up suggestion when appropriate";
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(20)->withHeaders([
+                'x-api-key' => $apiKey,
+                'anthropic-version' => '2023-06-01',
+                'Content-Type' => 'application/json',
+            ])->post('https://api.anthropic.com/v1/messages', [
+                'model' => config('services.anthropic.model', 'claude-3-5-haiku-20241022'),
+                'max_tokens' => 400,
+                'system' => $systemPrompt,
+                'messages' => [
+                    ['role' => 'user', 'content' => $question]
+                ],
+                'temperature' => 0.7,
+            ]);
+
+            if ($response->successful()) {
+                return trim($response->json('content.0.text', "⚽ Hmm, let me think about that. Try asking again!"));
+            }
+
+            \Illuminate\Support\Facades\Log::error('Claude Q&A failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Claude Q&A exception', ['error' => $e->getMessage()]);
+        }
+
+        return "⚽ Sorry, I'm having trouble right now. Reply *menu* to see options!";
     }
 }

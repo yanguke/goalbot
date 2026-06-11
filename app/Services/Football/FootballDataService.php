@@ -139,6 +139,63 @@ class FootballDataService
         });
     }
     
+    /**
+     * Get all World Cup fixtures (entire tournament) - cached 1 hour
+     */
+    public function getAllWorldCupFixtures(): array
+    {
+        return Cache::remember('wc_all_fixtures', 3600, function () {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key' => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/fixtures", [
+                    'league' => $this->getWorldCupLeagueId(),
+                    'season' => 2026,
+                ]);
+
+                return $response->successful() ? $response->json('response', []) : [];
+            } catch (\Exception $e) {
+                Log::error('All WC fixtures error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Build a compact RAG context string for AI Q&A
+     */
+    public function buildFixturesContext(): string
+    {
+        $fixtures = $this->getAllWorldCupFixtures();
+        if (empty($fixtures)) {
+            return "No fixture data available right now.";
+        }
+
+        $now = now();
+        $lines = ["FIFA World Cup 2026 (USA, Canada, Mexico) — June 11 to July 19, 2026"];
+        $lines[] = "Current time: " . $now->toDateTimeString() . " UTC";
+        $lines[] = "";
+        $lines[] = "FIXTURES:";
+
+        foreach ($fixtures as $f) {
+            $home = $f['teams']['home']['name'] ?? '?';
+            $away = $f['teams']['away']['name'] ?? '?';
+            $date = $f['fixture']['date'] ?? '';
+            $venue = $f['fixture']['venue']['name'] ?? '';
+            $city = $f['fixture']['venue']['city'] ?? '';
+            $status = $f['fixture']['status']['short'] ?? 'NS';
+            $round = $f['league']['round'] ?? '';
+            $homeGoals = $f['goals']['home'];
+            $awayGoals = $f['goals']['away'];
+
+            $score = ($homeGoals !== null && $awayGoals !== null) ? " [{$homeGoals}-{$awayGoals}]" : '';
+            $lines[] = "- {$date} | {$round} | {$home} vs {$away}{$score} | {$venue}, {$city} | Status: {$status}";
+        }
+
+        return implode("\n", $lines);
+    }
+
     private function getWorldCupLeagueId(): int
     {
         // World Cup league ID in API-Football

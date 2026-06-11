@@ -60,6 +60,7 @@ return [
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_MODEL', 'claude-3-5-haiku-20241022'),
+        'qa_enabled' => env('AI_QA_ENABLED', true),
     ],
 
     // OpenAI for message generation (legacy fallback)
