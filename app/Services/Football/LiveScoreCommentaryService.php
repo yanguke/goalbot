@@ -54,19 +54,69 @@ class LiveScoreCommentaryService
     }
 
     /**
-     * Get only the most recent key commentary entries (goals, cards, big chances)
+     * Events already handled by the API-Football event detector.
+     * Commentary entries matching these are suppressed to avoid duplicate alerts.
+     */
+    private array $coveredByDetector = [
+        'goal',         // detectGoal
+        'scores',       // goal variants
+        'yellow card',  // detectCards
+        'red card',     // detectCards
+        'second yellow',
+        'substitut',    // detectSubstitutions
+        'half-time',    // isHalfTime
+        'half time',
+        'full time',    // isFullTime
+        'full-time',
+        'kick off',     // kickoff in PollMatches
+        'kicks off',
+        'penalty scored',   // detectPenaltyEvents / goal type
+        'penalty missed',
+        'var',          // detectVarEvents
+    ];
+
+    /**
+     * Notable commentary NOT covered by the event detector — big chances, post hits, offsides, dangerous moments
+     */
+    private array $notableKeywords = [
+        'post!',
+        'crossbar',
+        'offside',
+        'great save',
+        'saves',
+        'chance',
+        'dangerous',
+        'shoots',
+        'almost',
+        'nearly',
+        'header',
+        'free kick',
+        'corner',
+        'own goal',   // sometimes commentary describes before API updates
+        'video review',
+    ];
+
+    /**
+     * Get notable commentary entries NOT already covered by the event detector.
      */
     public function getHighlights(string $matchSlug, int $limit = 10): array
     {
         $entries = $this->getCommentary($matchSlug);
-        $keywords = ['goal', 'yellow', 'red card', 'penalty', 'post', 'var', 'offside', 'substitut', 'half-time', 'full time', 'kick off'];
 
         return collect($entries)
-            ->filter(function ($c) use ($keywords) {
+            ->filter(function ($c) {
                 $text = strtolower($c['text']);
-                foreach ($keywords as $kw) {
+
+                // Skip anything the event detector already handles
+                foreach ($this->coveredByDetector as $kw) {
+                    if (str_contains($text, $kw)) return false;
+                }
+
+                // Only keep genuinely notable moments
+                foreach ($this->notableKeywords as $kw) {
                     if (str_contains($text, $kw)) return true;
                 }
+
                 return false;
             })
             ->take($limit)
