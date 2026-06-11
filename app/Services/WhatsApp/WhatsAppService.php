@@ -188,7 +188,7 @@ class WhatsAppService
                     "• Half-time & full-time scores\n\n" .
                     "💰 *Choose your plan:*\n" .
                     "• KES 49 — full day access (today)\n" .
-                    "• KES 999 — full tournament (all 104 matches)";
+                    "• KES 1,999 — full tournament (all 104 matches)";
             $footer = "Tap a button to pay via M-Pesa 👇";
             
             $buttons = [
@@ -203,7 +203,7 @@ class WhatsAppService
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_full',
-                        'title' => 'KES 999 - Full'
+                        'title' => 'KES 1999 - Full'
                     ]
                 ]
             ];
@@ -273,7 +273,7 @@ class WhatsAppService
                 "• Red cards, penalties & VAR\n" .
                 "• AI match commentary\n" .
                 "• Half-time & full-time scores";
-        $footer = $isKenyan ? "KES 49/day or KES 999 full tournament" : "\$0.99/day or \$9.99 full tournament";
+        $footer = $isKenyan ? "KES 49/day or KES 1,999 full tournament" : "\$0.99/day or \$9.99 full tournament";
         
         $buttons = [
             [
@@ -287,7 +287,7 @@ class WhatsAppService
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'pay_full',
-                    'title' => $isKenyan ? 'KES 999 - Full' : '$9.99 - Full'
+                    'title' => $isKenyan ? 'KES 1999 - Full' : '$9.99 - Full'
                 ]
             ]
         ];
@@ -318,10 +318,10 @@ class WhatsAppService
                 "• Full access for today\n" .
                 "• All matches, all alerts\n" .
                 "• AI commentary & predictions\n\n" .
-                "*Full Tournament* — KES 999\n" .
+                "*Full Tournament* — KES 1,999\n" .
                 "• All 104 World Cup matches\n" .
                 "• Never miss a goal all summer\n" .
-                "• Best value — saves KES 300+\n\n" .
+                "• Best value — just KES 20/day\n\n" .
                 "Reply *subscribe* to pay via M-Pesa."
             );
         }
@@ -667,7 +667,7 @@ class WhatsAppService
                 return ['status' => 'stk_initiated'];
                 
             case 'pay_full':
-                $this->initiateStkPush($subscriber->phone_number, 999, 'full_tournament');
+                $this->initiateStkPush($subscriber->phone_number, 1999, 'full_tournament');
                 return ['status' => 'stk_initiated'];
                 
             case 'pricing':
@@ -771,7 +771,7 @@ class WhatsAppService
         $msg = "🔒 *Premium Feature*\n\n";
         $msg .= "Live alerts & AI Q&A require a GoalBot subscription.\n\n";
         $msg .= $isKenyan
-            ? "💳 *KES 49* for full day access, or *KES 999* for the entire tournament.\n\n"
+            ? "💳 *KES 49* for full day access, or *KES 1,999* for the entire tournament.\n\n"
             : "💳 *\$0.99* for full day access, or *\$9.99* for the entire tournament.\n\n";
         $msg .= "Reply *subscribe* to pay, or *demo* to try a free preview.";
 

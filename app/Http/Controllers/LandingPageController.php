@@ -33,8 +33,8 @@ class LandingPageController extends Controller
             'symbol' => 'KSh',
             'per_match' => 49,
             'per_match_label' => 'KES 49',
-            'full' => 999,
-            'full_label' => 'KES 999',
+            'full' => 1999,
+            'full_label' => 'KES 1,999',
             'is_kenya' => true,
         ] : [
             'currency' => 'USD',
