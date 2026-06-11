@@ -167,17 +167,23 @@ class PollMatches extends Command
         $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
         if ($subscribers->isEmpty()) return;
 
-        // On first poll: mark ALL current entries as seen (cache-based, no DB write)
-        // so we never retroactively send old commentary.
+        // On first poll: lock all existing entries so we only send future ones.
         $seededCacheKey = "commentary_seeded_{$matchId}";
         if (!\Illuminate\Support\Facades\Cache::has($seededCacheKey)) {
             $allEntries = $commentary->getCommentary($lsSlug);
+            $elapsed    = $match['fixture']['status']['elapsed'] ?? 0;
             foreach ($allEntries as $entry) {
-                $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
-                \Illuminate\Support\Facades\Cache::put($lockKey, true, now()->addHours(6));
+                // Parse minute — handle "45+2'" style by taking base + added
+                preg_match('/^(\d+)(?:\+(\d+))?/', $entry['time'], $m);
+                $entryMin = (int)($m[1] ?? 0) + (int)($m[2] ?? 0);
+                // Lock everything up to AND including current elapsed minute
+                if ($entryMin <= $elapsed) {
+                    $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
+                    \Illuminate\Support\Facades\Cache::put($lockKey, true, now()->addHours(6));
+                }
             }
             \Illuminate\Support\Facades\Cache::put($seededCacheKey, true, now()->addHours(6));
-            $this->info("  Seeded " . count($allEntries) . " existing commentary entries");
+            $this->info("  Seeded existing commentary up to {$elapsed}'");
             return;
         }
 
