@@ -279,6 +279,47 @@ class FootballDataService
                     }
                 }
             }
+
+            // --- Predictions ---
+            $predictions = $this->getPredictions($fId);
+            if ($predictions) {
+                $pct     = $predictions['predictions']['percent'] ?? [];
+                $advice  = $predictions['predictions']['advice'] ?? null;
+                $winner  = $predictions['predictions']['winner']['name'] ?? null;
+                $goalsH  = $predictions['predictions']['goals']['home'] ?? null;
+                $goalsA  = $predictions['predictions']['goals']['away'] ?? null;
+                $lines[] = "PREDICTIONS:";
+                if ($winner)  $lines[] = "  Predicted winner: {$winner}";
+                if ($advice)  $lines[] = "  Advice: {$advice}";
+                if ($pct)     $lines[] = "  Win%: {$home} " . ($pct['home'] ?? '?') . " | Draw " . ($pct['draw'] ?? '?') . " | {$away} " . ($pct['away'] ?? '?');
+                if ($goalsH !== null) $lines[] = "  Predicted goals: {$home} {$goalsH} | {$away} {$goalsA}";
+            }
+
+            // --- Injuries ---
+            $injuries = $this->getInjuries($fId);
+            if (!empty($injuries)) {
+                $lines[] = "INJURIES:";
+                foreach ($injuries as $inj) {
+                    $pName  = $inj['player']['name'] ?? '?';
+                    $type   = $inj['player']['type'] ?? '?';
+                    $reason = $inj['player']['reason'] ?? '?';
+                    $tName  = $inj['team']['name'] ?? '?';
+                    $lines[] = "  {$tName} | {$pName} — {$type} ({$reason})";
+                }
+            }
+
+            // --- Odds ---
+            $odds = $this->getOdds($fId);
+            if (!empty($odds)) {
+                $lines[] = "ODDS (" . ($odds['bookmaker'] ?? 'bookmaker') . "):";
+                foreach ($odds['bets'] ?? [] as $market => $values) {
+                    $parts = [];
+                    foreach ($values as $label => $odd) {
+                        $parts[] = "{$label}: {$odd}";
+                    }
+                    $lines[] = "  {$market}: " . implode(' | ', $parts);
+                }
+            }
         }
 
         return implode("\n", $lines);
@@ -386,6 +427,71 @@ class FootballDataService
                 return $response->successful() ? $response->json('response', []) : [];
             } catch (\Exception $e) {
                 Log::error('Live stats error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get predictions for a fixture
+     */
+    public function getPredictions(int $fixtureId): ?array
+    {
+        return Cache::remember("predictions_{$fixtureId}", 3600, function () use ($fixtureId) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/predictions", ['fixture' => $fixtureId]);
+                return $response->successful() ? ($response->json('response.0') ?? null) : null;
+            } catch (\Exception $e) {
+                Log::error('Predictions error', ['error' => $e->getMessage()]);
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Get injuries for a fixture
+     */
+    public function getInjuries(int $fixtureId): array
+    {
+        return Cache::remember("injuries_{$fixtureId}", 3600, function () use ($fixtureId) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/injuries", ['fixture' => $fixtureId]);
+                return $response->successful() ? ($response->json('response') ?? []) : [];
+            } catch (\Exception $e) {
+                Log::error('Injuries error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get odds for a fixture (first bookmaker, key markets)
+     */
+    public function getOdds(int $fixtureId): array
+    {
+        return Cache::remember("odds_{$fixtureId}", 1800, function () use ($fixtureId) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/odds", ['fixture' => $fixtureId]);
+                $bookmaker = $response->json('response.0.bookmakers.0') ?? null;
+                if (!$bookmaker) return [];
+                $result = ['bookmaker' => $bookmaker['name']];
+                foreach ($bookmaker['bets'] ?? [] as $bet) {
+                    $result['bets'][$bet['name']] = collect($bet['values'])
+                        ->pluck('odd', 'value')
+                        ->toArray();
+                }
+                return $result;
+            } catch (\Exception $e) {
+                Log::error('Odds error', ['error' => $e->getMessage()]);
                 return [];
             }
         });

@@ -91,8 +91,11 @@ class SendReminders extends Command
         $this->info("  Sending to {$subscribers->count()} subscriber(s)");
 
         // Generate reminder + prediction messages (shared across all subscribers)
-        $reminder = $ai->generateReminder($match);
-        $prediction = $this->generatePrediction($homeTeam, $awayTeam, $venue, $round);
+        $reminder    = $ai->generateReminder($match);
+        $prediction  = $this->generatePrediction($homeTeam, $awayTeam, $venue, $round);
+        $football    = app(FootballDataService::class);
+        $fixtureId   = $match['fixture']['id'];
+        $oddsMsg     = $this->buildOddsMessage($football, $fixtureId, $homeTeam, $awayTeam);
         
         foreach ($subscribers as $subscriber) {
             try {
@@ -115,6 +118,12 @@ class SendReminders extends Command
                     usleep(200000);
                 }
 
+                // Send odds + injuries snapshot for 1h/2h windows only
+                if ($oddsMsg && in_array($windowLabel, ['1 hour', '2 hours'])) {
+                    $whatsapp->sendAlert($subscriber->phone_number, $oddsMsg);
+                    usleep(200000);
+                }
+
                 $this->reminderCount++;
                 $subscriber->update(['last_notification_at' => now()]);
 
@@ -126,6 +135,53 @@ class SendReminders extends Command
                 ]);
             }
         }
+    }
+
+    private function buildOddsMessage(FootballDataService $football, int $fixtureId, string $home, string $away): ?string
+    {
+        $odds        = $football->getOdds($fixtureId);
+        $predictions = $football->getPredictions($fixtureId);
+        $injuries    = $football->getInjuries($fixtureId);
+
+        $lines = [];
+
+        // Odds
+        $matchWinner = $odds['bets']['Match Winner'] ?? [];
+        if (!empty($matchWinner)) {
+            $hw = $matchWinner['Home'] ?? '?';
+            $d  = $matchWinner['Draw'] ?? '?';
+            $aw = $matchWinner['Away'] ?? '?';
+            $lines[] = "📊 *Odds* ({$odds['bookmaker']}): {$home} {$hw} | Draw {$d} | {$away} {$aw}";
+        }
+
+        // Predictions
+        if ($predictions) {
+            $pct    = $predictions['predictions']['percent'] ?? [];
+            $advice = $predictions['predictions']['advice'] ?? null;
+            $winner = $predictions['predictions']['winner']['name'] ?? null;
+            if ($winner && $winner !== 'null') {
+                $lines[] = "🔮 Predicted winner: *{$winner}*";
+            }
+            if ($advice && $advice !== 'No predictions available') {
+                $lines[] = "💡 {$advice}";
+            }
+            if (!empty($pct)) {
+                $lines[] = "Win probability: {$home} {$pct['home']} | Draw {$pct['draw']} | {$away} {$pct['away']}";
+            }
+        }
+
+        // Injuries
+        if (!empty($injuries)) {
+            $lines[] = "🚑 *Injury updates:*";
+            foreach ($injuries as $inj) {
+                $pName  = $inj['player']['name'] ?? '?';
+                $type   = $inj['player']['type'] ?? '?';
+                $tName  = $inj['team']['name'] ?? '?';
+                $lines[] = "  • {$tName}: {$pName} ({$type})";
+            }
+        }
+
+        return !empty($lines) ? implode("\n", $lines) : null;
     }
 
     private function generatePrediction(string $home, string $away, string $venue, string $round): ?string
