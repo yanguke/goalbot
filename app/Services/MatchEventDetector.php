@@ -28,45 +28,35 @@ class MatchEventDetector
         
         // Check for various events (kickoff handled separately in PollMatches with DB dedup)
         if ($goalData = $this->detectGoal($previous, $currentMatch)) {
-            $events[] = [
-                'type' => 'goal',
-                'data' => $goalData,
-            ];
+            $events[] = ['type' => 'goal', 'data' => $goalData];
         }
-        
+
         if ($this->isHalfTime($previous, $currentMatch)) {
-            $events[] = [
-                'type' => 'halftime',
-                'data' => $this->buildHalftimeData($currentMatch),
-            ];
+            $events[] = ['type' => 'halftime', 'data' => $this->buildHalftimeData($currentMatch)];
         }
-        
+
+        if ($this->isSecondHalfKickoff($previous, $currentMatch)) {
+            $events[] = ['type' => 'second_half', 'data' => $this->buildHalftimeData($currentMatch)];
+        }
+
         if ($this->isFullTime($previous, $currentMatch)) {
-            $events[] = [
-                'type' => 'fulltime',
-                'data' => $this->buildFulltimeData($currentMatch),
-            ];
+            $events[] = ['type' => 'fulltime', 'data' => $this->buildFulltimeData($currentMatch)];
         }
-        
-        if ($cardData = $this->detectRedCard($previous, $currentMatch)) {
-            $events[] = [
-                'type' => 'red_card',
-                'data' => $cardData,
-            ];
+
+        foreach ($this->detectCards($previous, $currentMatch) as $card) {
+            $events[] = ['type' => $card['event_type'], 'data' => $card];
         }
-        
-        if ($penaltyData = $this->detectPenalty($previous, $currentMatch)) {
-            $events[] = [
-                'type' => 'penalty',
-                'data' => $penaltyData,
-            ];
+
+        foreach ($this->detectVarEvents($previous, $currentMatch) as $var) {
+            $events[] = ['type' => 'var', 'data' => $var];
+        }
+
+        foreach ($this->detectPenaltyEvents($previous, $currentMatch) as $pen) {
+            $events[] = ['type' => $pen['event_type'], 'data' => $pen];
         }
 
         foreach ($this->detectSubstitutions($previous, $currentMatch) as $sub) {
-            $events[] = [
-                'type' => 'substitution',
-                'data' => $sub,
-            ];
+            $events[] = ['type' => 'substitution', 'data' => $sub];
         }
         
         // Update stored state
@@ -79,8 +69,14 @@ class MatchEventDetector
     {
         $prevStatus = $previous['fixture']['status']['short'] ?? 'NS';
         $currStatus = $current['fixture']['status']['short'] ?? 'NS';
-        
         return $prevStatus === 'NS' && ($currStatus === '1H' || $currStatus === 'LIVE');
+    }
+
+    private function isSecondHalfKickoff(array $previous, array $current): bool
+    {
+        $prevStatus = $previous['fixture']['status']['short'] ?? '';
+        $currStatus = $current['fixture']['status']['short'] ?? '';
+        return $prevStatus === 'HT' && $currStatus === '2H';
     }
     
     private function detectGoal(array $previous, array $current): ?array
@@ -89,30 +85,28 @@ class MatchEventDetector
         $prevAway = $previous['goals']['away'] ?? 0;
         $currHome = $current['goals']['home'] ?? 0;
         $currAway = $current['goals']['away'] ?? 0;
-        
-        if ($currHome > $prevHome) {
-            return [
-                'team' => $current['teams']['home']['name'],
-                'team_logo' => $current['teams']['home']['logo'],
-                'is_home' => true,
-                'score' => "{$currHome}-{$currAway}",
-                'minute' => $current['fixture']['status']['elapsed'] ?? '?',
-                'scorer' => $this->extractScorer($current, true),
-            ];
-        }
-        
-        if ($currAway > $prevAway) {
-            return [
-                'team' => $current['teams']['away']['name'],
-                'team_logo' => $current['teams']['away']['logo'],
-                'is_home' => false,
-                'score' => "{$currHome}-{$currAway}",
-                'minute' => $current['fixture']['status']['elapsed'] ?? '?',
-                'scorer' => $this->extractScorer($current, false),
-            ];
-        }
-        
-        return null;
+
+        $isHome = $currHome > $prevHome;
+        $isAway = $currAway > $prevAway;
+        if (!$isHome && !$isAway) return null;
+
+        $scoringTeam  = $isHome ? $current['teams']['home']['name'] : $current['teams']['away']['name'];
+        $minute       = $current['fixture']['status']['elapsed'] ?? '?';
+        $goalEvent    = $this->extractGoalEvent($current, $isHome);
+        $detail       = $goalEvent['detail'] ?? 'Normal Goal';
+        $scorer       = $goalEvent['player']['name'] ?? null;
+        $assist       = $goalEvent['assist']['name'] ?? null;
+
+        return [
+            'team'       => $scoringTeam,
+            'score'      => "{$currHome}-{$currAway}",
+            'minute'     => $minute,
+            'scorer'     => $scorer,
+            'assist'     => $assist,
+            'goal_type'  => $detail, // Normal Goal | Own Goal | Penalty
+            'is_own_goal'=> str_contains($detail, 'Own'),
+            'is_penalty' => $detail === 'Penalty',
+        ];
     }
     
     private function isHalfTime(array $previous, array $current): bool
@@ -134,28 +128,37 @@ class MatchEventDetector
         return $wasPlaying && $isFinished;
     }
     
-    private function detectRedCard(array $previous, array $current): ?array
+    private function detectCards(array $previous, array $current): array
     {
-        // Get events from API if available
-        $events = $current['events'] ?? [];
+        $events     = $current['events'] ?? [];
         $prevEvents = $previous['events'] ?? [];
-        
-        $newRedCards = collect($events)
+        $prevKeys   = collect($prevEvents)
             ->where('type', 'Card')
-            ->where('detail', 'Red Card')
-            ->whereNotIn('time.elapsed', collect($prevEvents)->pluck('time.elapsed')->toArray())
-            ->first();
-        
-        if ($newRedCards) {
+            ->map(fn($e) => $e['time']['elapsed'] . '_' . ($e['player']['name'] ?? ''))
+            ->toArray();
+
+        $newCards = collect($events)
+            ->where('type', 'Card')
+            ->filter(function ($e) use ($prevKeys) {
+                $key = $e['time']['elapsed'] . '_' . ($e['player']['name'] ?? '');
+                return !in_array($key, $prevKeys, true);
+            });
+
+        return $newCards->map(function ($e) {
+            $detail = $e['detail'] ?? 'Yellow Card';
+            $type   = match (true) {
+                $detail === 'Red Card'         => 'red_card',
+                $detail === 'Yellow Red Card'  => 'second_yellow',
+                default                        => 'yellow_card',
+            };
             return [
-                'player' => $newRedCards['player']['name'],
-                'team' => $newRedCards['team']['name'],
-                'minute' => $newRedCards['time']['elapsed'],
-                'reason' => 'Red card',
+                'event_type' => $type,
+                'player'     => $e['player']['name'] ?? 'Unknown',
+                'team'       => $e['team']['name'] ?? 'Unknown',
+                'minute'     => $e['time']['elapsed'],
+                'reason'     => $e['comments'] ?? $detail,
             ];
-        }
-        
-        return null;
+        })->values()->toArray();
     }
     
     private function detectSubstitutions(array $previous, array $current): array
@@ -180,39 +183,66 @@ class MatchEventDetector
             ->toArray();
     }
 
-    private function detectPenalty(array $previous, array $current): ?array
+    private function detectPenaltyEvents(array $previous, array $current): array
     {
-        $events = $current['events'] ?? [];
+        $events     = $current['events'] ?? [];
         $prevEvents = $previous['events'] ?? [];
-        
-        $newPenalty = collect($events)
-            ->where('type', 'Card')
-            ->where('comments', 'Penalty')
-            ->whereNotIn('time.elapsed', collect($prevEvents)->pluck('time.elapsed')->toArray())
-            ->first();
-        
-        if ($newPenalty) {
-            return [
-                'team' => $newPenalty['team']['name'],
-                'player' => $newPenalty['player']['name'],
-                'minute' => $newPenalty['time']['elapsed'],
-            ];
-        }
-        
-        return null;
+        $prevKeys   = collect($prevEvents)
+            ->where('type', 'Goal')
+            ->map(fn($e) => $e['time']['elapsed'] . '_' . ($e['player']['name'] ?? ''))
+            ->toArray();
+
+        return collect($events)
+            ->where('type', 'Goal')
+            ->whereIn('detail', ['Missed Penalty'])
+            ->filter(function ($e) use ($prevKeys) {
+                $key = $e['time']['elapsed'] . '_' . ($e['player']['name'] ?? '');
+                return !in_array($key, $prevKeys, true);
+            })
+            ->map(fn($e) => [
+                'event_type' => 'penalty_missed',
+                'team'       => $e['team']['name'] ?? 'Unknown',
+                'player'     => $e['player']['name'] ?? 'Unknown',
+                'minute'     => $e['time']['elapsed'],
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    private function detectVarEvents(array $previous, array $current): array
+    {
+        $events     = $current['events'] ?? [];
+        $prevEvents = $previous['events'] ?? [];
+        $prevKeys   = collect($prevEvents)
+            ->where('type', 'Var')
+            ->map(fn($e) => $e['time']['elapsed'] . '_' . ($e['detail'] ?? ''))
+            ->toArray();
+
+        return collect($events)
+            ->where('type', 'Var')
+            ->filter(function ($e) use ($prevKeys) {
+                $key = $e['time']['elapsed'] . '_' . ($e['detail'] ?? '');
+                return !in_array($key, $prevKeys, true);
+            })
+            ->map(fn($e) => [
+                'detail'  => $e['detail'] ?? 'VAR Review',
+                'team'    => $e['team']['name'] ?? 'Unknown',
+                'player'  => $e['player']['name'] ?? null,
+                'minute'  => $e['time']['elapsed'],
+                'comment' => $e['comments'] ?? null,
+            ])
+            ->values()
+            ->toArray();
     }
     
-    private function extractScorer(array $match, bool $isHome): ?string
+    private function extractGoalEvent(array $match, bool $isHome): ?array
     {
-        $events = $match['events'] ?? [];
-        
-        $goalEvent = collect($events)
+        $teamName = $isHome ? $match['teams']['home']['name'] : $match['teams']['away']['name'];
+        return collect($match['events'] ?? [])
             ->where('type', 'Goal')
-            ->where('team.name', $isHome ? $match['teams']['home']['name'] : $match['teams']['away']['name'])
+            ->filter(fn($e) => ($e['team']['name'] ?? '') === $teamName)
             ->sortByDesc('time.elapsed')
             ->first();
-        
-        return $goalEvent['player']['name'] ?? null;
     }
     
     private function buildKickoffData(array $match): array

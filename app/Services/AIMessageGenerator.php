@@ -77,7 +77,12 @@ PROMPT;
         }
         
         if ($type === 'goal') {
-            return "{$teamContext}\nEvent: GOAL!\nScoring team: {$data['team']}\nScore: {$data['score']}\nScorer: {$scorer}\nMinute: {$data['minute']}'\nIs user's team? {$isUserTeam}\n\nRules:\n- Start with ⚽ GOAL!\n- Keep under 200 characters\n- Include scorer name and minute\n- If it's the user's team, add 🔥 or extra excitement\n- Be dramatic but accurate";
+            $goalType = $data['goal_type'] ?? 'Normal Goal';
+            $assist   = $data['assist'] ?? null;
+            $assistStr = $assist ? "Assist: {$assist}" : 'No assist data';
+            $ownGoal  = ($data['is_own_goal'] ?? false) ? 'YES — own goal, credit goes against scoring team' : 'NO';
+            $isPen    = ($data['is_penalty'] ?? false) ? 'YES — penalty' : 'NO';
+            return "{$teamContext}\nEvent: GOAL!\nScoring team: {$data['team']}\nScore: {$data['score']}\nScorer: {$scorer}\n{$assistStr}\nMinute: {$data['minute']}'\nGoal type: {$goalType}\nOwn goal? {$ownGoal}\nPenalty? {$isPen}\nIs user's team? {$isUserTeam}\n\nRules:\n- Own goal: use 😬 and show sympathy/drama\n- Penalty: use 🎯 ⚽\n- Normal goal: use ⚽ GOAL!\n- Include scorer and minute\n- Mention assist if available\n- Be poetic and dramatic\n- Under 250 characters";
         }
         
         if ($type === 'halftime') {
@@ -98,6 +103,29 @@ PROMPT;
 
         if ($type === 'substitution') {
             return "{$teamContext}\nEvent: SUBSTITUTION\nTeam: {$data['team']}\nOFF: {$data['player_out']}\nON: {$data['player_in']}\nMinute: {$data['minute']}'\n\nRules:\n- Start with 🔄 SUB\n- Keep under 120 characters\n- Format: Team | PlayerOUT ➡ PlayerIN | Minute\n- One brief tactical note if obvious";
+        }
+
+        if ($type === 'yellow_card') {
+            return "{$teamContext}\nEvent: YELLOW CARD\nPlayer: {$data['player']}\nTeam: {$data['team']}\nMinute: {$data['minute']}'\nReason: {$data['reason']}\n\nRules:\n- Start with 🟨\n- Keep under 100 characters\n- Note it's a booking, brief";
+        }
+
+        if ($type === 'second_yellow') {
+            return "{$teamContext}\nEvent: SECOND YELLOW = RED CARD\nPlayer: {$data['player']}\nTeam: {$data['team']}\nMinute: {$data['minute']}'\n\nRules:\n- Start with 🟨🟥 OFF!\n- Keep under 150 characters\n- Dramatic — team down to 10 men\n- This is a game-changer moment";
+        }
+
+        if ($type === 'penalty_missed') {
+            return "{$teamContext}\nEvent: PENALTY MISSED!\nPlayer: {$data['player']}\nTeam: {$data['team']}\nMinute: {$data['minute']}'\n\nRules:\n- Start with 😱 MISSED!\n- Keep under 150 characters\n- Capture the agony\n- Peter Drury at his most dramatic";
+        }
+
+        if ($type === 'var') {
+            $detail  = $data['detail'] ?? 'VAR Review';
+            $player  = $data['player'] ?? '';
+            $comment = $data['comment'] ?? '';
+            return "{$teamContext}\nEvent: VAR — {$detail}\nTeam: {$data['team']}\nPlayer: {$player}\nMinute: {$data['minute']}'\nComment: {$comment}\n\nRules:\n- Start with 📺 VAR\n- Keep under 150 characters\n- Describe what VAR decided (goal cancelled, penalty confirmed etc.)\n- Capture the tension of the wait";
+        }
+
+        if ($type === 'second_half') {
+            return "{$teamContext}\nEvent: SECOND HALF UNDERWAY\nScore: {$data['home_score']}-{$data['away_score']}\n{$data['home_team']} vs {$data['away_team']}\n\nRules:\n- Start with ⚽ 2ND HALF\n- Keep under 120 characters\n- Build anticipation for the second half\n- Mention current score";
         }
 
         return "Generate a WhatsApp message for a World Cup {$type} event with data: " . json_encode($data);
