@@ -529,7 +529,16 @@ class FootballDataService
      */
     public function getLiveScoreFullSlug(string $home, string $away, int $fixtureId): ?string
     {
+        // Try cache first, then fall back to DB (survives cache:clear)
         $lsId = Cache::get("livescore_id_{$fixtureId}");
+        if (!$lsId) {
+            $row  = \Illuminate\Support\Facades\DB::table('livescore_mappings')
+                ->where('fixture_id', $fixtureId)->first();
+            $lsId = $row->livescore_id ?? null;
+            if ($lsId) {
+                Cache::put("livescore_id_{$fixtureId}", $lsId, now()->addDays(30));
+            }
+        }
         if (!$lsId) return null;
         $teamSlug = Str::slug($home) . '-vs-' . Str::slug($away);
         return "{$teamSlug}/{$lsId}";

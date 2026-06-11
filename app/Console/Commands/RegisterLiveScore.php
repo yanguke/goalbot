@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Services\Football\FootballDataService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class RegisterLiveScore extends Command
 {
@@ -28,10 +29,25 @@ class RegisterLiveScore extends Command
             return self::FAILURE;
         }
 
-        // Persist to DB-backed cache (survives restarts)
+        // Parse team names from URL slug
+        preg_match('/world-cup-\d+\/([a-z-]+)-vs-([a-z-]+)\//i', $url, $teamMatch);
+        $homeSlug = $teamMatch[1] ?? '';
+        $awaySlug = $teamMatch[2] ?? '';
+
+        // Persist to DB (survives cache:clear and server restarts)
+        DB::table('livescore_mappings')->upsert([
+            'fixture_id'   => $fixtureId,
+            'livescore_id' => $liveScoreId,
+            'home_team'    => $homeSlug,
+            'away_team'    => $awaySlug,
+            'created_at'   => now(),
+            'updated_at'   => now(),
+        ], ['fixture_id'], ['livescore_id', 'home_team', 'away_team', 'updated_at']);
+
+        // Also warm the cache
         Cache::put("livescore_id_{$fixtureId}", $liveScoreId, now()->addDays(30));
 
-        // Also seed the seeded flag as false so commentary starts fresh
+        // Reset seeded flag so commentary starts fresh
         Cache::forget("commentary_seeded_{$fixtureId}");
 
         $this->info("Registered:");
