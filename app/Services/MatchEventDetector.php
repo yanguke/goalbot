@@ -61,6 +61,13 @@ class MatchEventDetector
                 'data' => $penaltyData,
             ];
         }
+
+        foreach ($this->detectSubstitutions($previous, $currentMatch) as $sub) {
+            $events[] = [
+                'type' => 'substitution',
+                'data' => $sub,
+            ];
+        }
         
         // Update stored state
         $this->storeState($matchId, $currentMatch);
@@ -151,6 +158,28 @@ class MatchEventDetector
         return null;
     }
     
+    private function detectSubstitutions(array $previous, array $current): array
+    {
+        $events = $current['events'] ?? [];
+        $prevEvents = $previous['events'] ?? [];
+        $prevElapsed = collect($prevEvents)
+            ->where('type', 'subst')
+            ->pluck('time.elapsed')
+            ->toArray();
+
+        return collect($events)
+            ->where('type', 'subst')
+            ->whereNotIn('time.elapsed', $prevElapsed)
+            ->map(fn($e) => [
+                'team'      => $e['team']['name'],
+                'player_in' => $e['assist']['name'] ?? 'Unknown',
+                'player_out'=> $e['player']['name'] ?? 'Unknown',
+                'minute'    => $e['time']['elapsed'],
+            ])
+            ->values()
+            ->toArray();
+    }
+
     private function detectPenalty(array $previous, array $current): ?array
     {
         $events = $current['events'] ?? [];

@@ -750,6 +750,21 @@ class WhatsAppService
             return ['status' => 'next_sent'];
         }
 
+        if (in_array($textLower, ['lineups', 'lineup', 'starting 11', 'xi'], true)) {
+            $this->sendLineups($subscriber->phone_number);
+            return ['status' => 'lineups_sent'];
+        }
+
+        if (in_array($textLower, ['stats', 'statistics', 'live stats'], true)) {
+            $this->sendLiveStats($subscriber->phone_number);
+            return ['status' => 'stats_sent'];
+        }
+
+        if (in_array($textLower, ['subs', 'substitutions', 'changes'], true)) {
+            $this->sendSubstitutions($subscriber->phone_number);
+            return ['status' => 'subs_sent'];
+        }
+
         // Everything else (free-form questions) requires a paid subscription
         if ($subscriber->isFree()) {
             return $this->sendPaywall($subscriber);
@@ -777,6 +792,113 @@ class WhatsAppService
 
         $this->sendText($subscriber->phone_number, $msg);
         return ['status' => 'paywall_sent'];
+    }
+
+    protected function sendLineups(string $phone): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $fixtureId = $football->getTodayFixtureId();
+
+        if (!$fixtureId) {
+            return $this->sendText($phone, "⚽ No live or today's match found. Check back closer to kickoff!");
+        }
+
+        $lineups = $football->getLineups($fixtureId);
+
+        if (empty($lineups)) {
+            return $this->sendText($phone, "📋 Lineups not announced yet. They usually drop 1 hour before kickoff — check back soon!");
+        }
+
+        $msg = "📋 *Starting Lineups*\n\n";
+        foreach ($lineups as $team) {
+            $name = $team['team']['name'];
+            $formation = $team['formation'] ?? 'N/A';
+            $msg .= "*{$name}* ({$formation})\n";
+            $starters = collect($team['startXI'] ?? [])->map(fn($p) => $p['player']['number'] . '. ' . $p['player']['name'])->implode("\n");
+            $msg .= $starters . "\n\n";
+        }
+
+        return $this->sendText($phone, trim($msg));
+    }
+
+    protected function sendLiveStats(string $phone): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $live = $football->getLiveMatches();
+
+        if (empty($live)) {
+            return $this->sendText($phone, "📊 No live match right now. Stats are available during matches!");
+        }
+
+        $match = $live[0];
+        $fixtureId = $match['fixture']['id'];
+        $home = $match['teams']['home']['name'];
+        $away = $match['teams']['away']['name'];
+        $score = ($match['goals']['home'] ?? 0) . '-' . ($match['goals']['away'] ?? 0);
+        $minute = $match['fixture']['status']['elapsed'] ?? '?';
+
+        $stats = $football->getLiveStats($fixtureId);
+
+        if (empty($stats)) {
+            return $this->sendText($phone, "📊 Stats not available yet for {$home} vs {$away}. Try again in a few minutes!");
+        }
+
+        $statMap = [];
+        foreach ($stats as $teamStats) {
+            $tName = $teamStats['team']['name'];
+            foreach ($teamStats['statistics'] ?? [] as $s) {
+                $statMap[$s['type']][$tName] = $s['value'] ?? '-';
+            }
+        }
+
+        $msg = "📊 *Live Stats — {$minute}'*\n";
+        $msg .= "{$home} {$score} {$away}\n\n";
+
+        $show = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards'];
+        foreach ($show as $stat) {
+            if (isset($statMap[$stat])) {
+                $h = $statMap[$stat][$home] ?? '-';
+                $a = $statMap[$stat][$away] ?? '-';
+                $msg .= "{$h} | {$stat} | {$a}\n";
+            }
+        }
+
+        return $this->sendText($phone, trim($msg));
+    }
+
+    protected function sendSubstitutions(string $phone): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $live = $football->getLiveMatches();
+        $today = $football->getMatchesForDate(now()->toDateString());
+        $matches = !empty($live) ? $live : $today;
+
+        if (empty($matches)) {
+            return $this->sendText($phone, "🔄 No match data available right now.");
+        }
+
+        $match = $matches[0];
+        $fixtureId = $match['fixture']['id'];
+        $home = $match['teams']['home']['name'];
+        $away = $match['teams']['away']['name'];
+
+        $events = $football->getMatchEvents($fixtureId);
+        $subs = collect($events)->where('type', 'subst')->sortBy('time.elapsed');
+
+        if ($subs->isEmpty()) {
+            return $this->sendText($phone, "🔄 No substitutions yet in {$home} vs {$away}.");
+        }
+
+        $msg = "🔄 *Substitutions — {$home} vs {$away}*\n\n";
+        foreach ($subs as $s) {
+            $teamName = $s['team']['name'];
+            $out = $s['player']['name'] ?? '?';
+            $in  = $s['assist']['name'] ?? '?';
+            $min = $s['time']['elapsed'] ?? '?';
+            $msg .= "{$min}' | {$teamName}\n⬆ {$in}  ⬇ {$out}\n\n";
+        }
+
+        return $this->sendText($phone, trim($msg));
     }
 
     protected function sendStandings(string $phone): bool

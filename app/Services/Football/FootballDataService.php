@@ -261,6 +261,62 @@ class FootballDataService
         })->sortBy('fixture.date')->first();
     }
 
+    /**
+     * Get lineups for a fixture
+     */
+    public function getLineups(int $fixtureId): array
+    {
+        return Cache::remember("lineups_{$fixtureId}", 300, function () use ($fixtureId) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key' => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/fixtures/lineups", [
+                    'fixture' => $fixtureId,
+                ]);
+                return $response->successful() ? $response->json('response', []) : [];
+            } catch (\Exception $e) {
+                Log::error('Lineups error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get live statistics for a fixture (possession, shots, corners etc.)
+     */
+    public function getLiveStats(int $fixtureId): array
+    {
+        return Cache::remember("live_stats_{$fixtureId}", 30, function () use ($fixtureId) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key' => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/fixtures/statistics", [
+                    'fixture' => $fixtureId,
+                ]);
+                return $response->successful() ? $response->json('response', []) : [];
+            } catch (\Exception $e) {
+                Log::error('Live stats error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get today's live fixture ID (first live/in-progress WC match)
+     */
+    public function getTodayFixtureId(): ?int
+    {
+        $live = $this->getLiveMatches();
+        if (!empty($live)) {
+            return $live[0]['fixture']['id'] ?? null;
+        }
+        // Fall back to today's first match
+        $today = $this->getMatchesForDate(now()->toDateString());
+        return !empty($today) ? ($today[0]['fixture']['id'] ?? null) : null;
+    }
+
     private function getWorldCupLeagueId(): int
     {
         // World Cup league ID in API-Football

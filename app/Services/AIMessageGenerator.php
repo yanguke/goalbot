@@ -95,7 +95,11 @@ PROMPT;
         if ($type === 'penalty') {
             return "{$teamContext}\nEvent: PENALTY awarded!\nTeam: {$data['team']}\nPlayer: {$data['player']}\nMinute: {$data['minute']}'\n\nRules:\n- Start with 🎯 PENALTY!\n- Keep under 150 characters\n- Dramatic moment\n- Don't say who will take it";
         }
-        
+
+        if ($type === 'substitution') {
+            return "{$teamContext}\nEvent: SUBSTITUTION\nTeam: {$data['team']}\nOFF: {$data['player_out']}\nON: {$data['player_in']}\nMinute: {$data['minute']}'\n\nRules:\n- Start with 🔄 SUB\n- Keep under 120 characters\n- Format: Team | PlayerOUT ➡ PlayerIN | Minute\n- One brief tactical note if obvious";
+        }
+
         return "Generate a WhatsApp message for a World Cup {$type} event with data: " . json_encode($data);
     }
     
