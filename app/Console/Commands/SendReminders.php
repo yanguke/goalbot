@@ -23,18 +23,30 @@ class SendReminders extends Command
         MessageSender $whatsapp
     ): int {
         $this->info('Checking for upcoming matches...');
-        
-        // Check for matches starting in exactly 2 hours
-        $windowStart = now()->addHours(2)->startOfMinute();
-        $windowEnd = now()->addHours(2)->addMinutes(5)->startOfMinute();
-        
-        $matches = $football->getMatchesStartingBetween(
-            $windowStart->toIso8601String(),
-            $windowEnd->toIso8601String()
-        );
-        
+
+        // Send reminders for matches starting in 60–75 min OR 115–125 min from now
+        // Running every 5 min — these windows ensure each match gets exactly one reminder at each milestone
+        $windows = [
+            ['label' => '1 hour',  'from' => now()->addMinutes(60),  'to' => now()->addMinutes(75)],
+            ['label' => '2 hours', 'from' => now()->addMinutes(115), 'to' => now()->addMinutes(125)],
+        ];
+
+        $matches = [];
+        $windowLabel = '1 hour';
+        foreach ($windows as $window) {
+            $found = $football->getMatchesStartingBetween(
+                $window['from']->toIso8601String(),
+                $window['to']->toIso8601String()
+            );
+            if (!empty($found)) {
+                $matches = $found;
+                $windowLabel = $window['label'];
+                break;
+            }
+        }
+
         if (empty($matches)) {
-            $this->warn("No matches starting in 2 hours");
+            $this->warn("No matches starting in ~1 or ~2 hours");
             return self::SUCCESS;
         }
         

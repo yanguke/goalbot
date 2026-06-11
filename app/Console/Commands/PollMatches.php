@@ -61,7 +61,23 @@ class PollMatches extends Command
         $status = $match['fixture']['status']['short'] ?? 'unknown';
         
         $this->info("Processing: {$homeTeam} vs {$awayTeam} (Status: {$status})");
-        
+
+        // Send kickoff notification the first time we see 1H
+        if ($status === '1H') {
+            $kickoffKey = "kickoff_sent_{$matchId}";
+            if (!\Cache::has($kickoffKey)) {
+                \Cache::put($kickoffKey, true, now()->addHours(4));
+                $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
+                $score = $match['goals']['home'] . '-' . $match['goals']['away'];
+                $kickoffMsg = "🔴 *KICK OFF!*\n\n{$homeTeam} vs {$awayTeam} has just started!\nScore: {$score}\n\nGoalBot is watching — we'll alert you on every goal, red card & key moment. 👀";
+                foreach ($subscribers as $sub) {
+                    $whatsapp->sendAlert($sub->phone_number, $kickoffMsg);
+                    usleep(100000);
+                }
+                $this->info("  Sent kickoff notification to {$subscribers->count()} subscribers");
+            }
+        }
+
         // Detect events
         $events = $detector->detectEvents($match);
         
