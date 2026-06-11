@@ -26,14 +26,7 @@ class MatchEventDetector
             return [];
         }
         
-        // Check for various events
-        if ($this->isKickoff($previous, $currentMatch)) {
-            $events[] = [
-                'type' => 'kickoff',
-                'data' => $this->buildKickoffData($currentMatch),
-            ];
-        }
-        
+        // Check for various events (kickoff handled separately in PollMatches with DB dedup)
         if ($goalData = $this->detectGoal($previous, $currentMatch)) {
             $events[] = [
                 'type' => 'goal',

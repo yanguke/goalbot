@@ -70,20 +70,32 @@ class PollMatches extends Command
         
         $this->info("Processing: {$homeTeam} vs {$awayTeam} (Status: {$status})");
 
-        // Send kickoff notification the first time we see 1H
+        // Send kickoff notification the first time we see 1H — deduped via notifications table
         if ($status === '1H') {
-            $kickoffKey = "kickoff_sent_{$matchId}";
-            if (!\Cache::has($kickoffKey)) {
-                \Cache::put($kickoffKey, true, now()->addHours(4));
-                $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
-                $score = $match['goals']['home'] . '-' . $match['goals']['away'];
-                $kickoffMsg = "🔴 *KICK OFF!*\n\n{$homeTeam} vs {$awayTeam} has just started!\nScore: {$score}\n\nGoalBot is watching — we'll alert you on every goal, red card & key moment. 👀";
-                foreach ($subscribers as $sub) {
-                    $whatsapp->sendAlert($sub->phone_number, $kickoffMsg);
-                    usleep(100000);
-                }
-                $this->info("  Sent kickoff notification to {$subscribers->count()} subscribers");
+            $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
+            $score = ($match['goals']['home'] ?? 0) . '-' . ($match['goals']['away'] ?? 0);
+            $kickoffMsg = "🔴 *KICK OFF!*\n\n{$homeTeam} vs {$awayTeam} has just started!\nScore: {$score}\n\nGoalBot is watching — we'll alert you on every goal, red card & key moment. 👀";
+            $sent = 0;
+            foreach ($subscribers as $sub) {
+                $alreadySent = \App\Models\Notification::where('subscriber_id', $sub->id)
+                    ->where('match_id', $matchId)
+                    ->where('event_type', 'kickoff')
+                    ->exists();
+                if ($alreadySent) continue;
+
+                \App\Models\Notification::create([
+                    'subscriber_id' => $sub->id,
+                    'match_id'      => $matchId,
+                    'event_type'    => 'kickoff',
+                    'message'       => $kickoffMsg,
+                    'sent_at'       => now(),
+                    'status'        => 'sent',
+                ]);
+                $whatsapp->sendAlert($sub->phone_number, $kickoffMsg);
+                usleep(100000);
+                $sent++;
             }
+            if ($sent > 0) $this->info("  Sent kickoff to {$sent} subscribers");
         }
 
         // Detect events
