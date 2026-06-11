@@ -70,13 +70,17 @@ class WhatsAppService
         if (!$subscriber) {
             $subscriber = Subscriber::create([
                 'phone_number' => $phoneNumber,
-                'is_active' => true,
+                'is_active' => false,
                 'notifications_enabled' => true,
-                'notify_all_matches' => true,
+                'notify_all_matches' => false,
                 'demo_mode' => false,
+                'subscription_type' => 'free',
             ]);
-            
-            Log::info('New subscriber created', ['phone' => $phoneNumber]);
+
+            Log::info('New subscriber created (free)', ['phone' => $phoneNumber]);
+
+            // Greet and prompt subscription
+            $this->sendWelcome($phoneNumber);
         }
         
         return $subscriber;
@@ -674,16 +678,210 @@ class WhatsAppService
         
         // Direct commands
         $textLower = strtolower(trim($text));
-        return match ($textLower) {
-            'demo' => $this->startDemo($subscriber) ? ['status' => 'demo_started'] : ['status' => 'demo_failed'],
-            'subscribe', 'opt in', 'join' => $this->subscribeUser($subscriber) ? ['status' => 'subscribed'] : ['status' => 'subscribe_failed'],
-            'pricing', 'price' => $this->sendPricing($subscriber->phone_number) ? ['status' => 'pricing_sent'] : ['status' => 'pricing_failed'],
-            'pay', '/pay' => $this->processPayment($subscriber->phone_number) ? ['status' => 'payment_initiated'] : ['status' => 'payment_failed'],
-            'menu', 'help', 'hi', 'hello', 'start' => $this->sendMainMenu($subscriber->phone_number) ? ['status' => 'menu_sent'] : ['status' => 'menu_failed'],
-            default => config('services.anthropic.qa_enabled', true)
-                ? $this->handleAIQuestion($subscriber, $text)
-                : ($this->sendWelcome($subscriber->phone_number) ? ['status' => 'welcome_sent'] : ['status' => 'welcome_failed']),
-        };
+
+        // Handle "next [team]" e.g. "next brazil"
+        if (str_starts_with($textLower, 'next ')) {
+            $team = trim(substr($text, 5));
+            $this->sendTeamNextMatch($subscriber->phone_number, $team);
+            return ['status' => 'next_match_sent'];
+        }
+
+        // Route free commands (always available regardless of plan)
+        if (in_array($textLower, ['demo'], true)) {
+            $this->startDemo($subscriber);
+            return ['status' => 'demo_started'];
+        }
+
+        if (in_array($textLower, ['subscribe', 'opt in', 'join'], true)) {
+            $this->subscribeUser($subscriber);
+            return ['status' => 'subscribe_prompt'];
+        }
+
+        if (in_array($textLower, ['pricing', 'price'], true)) {
+            $this->sendPricing($subscriber->phone_number);
+            return ['status' => 'pricing_sent'];
+        }
+
+        if (in_array($textLower, ['pay', '/pay'], true)) {
+            $this->processPayment($subscriber->phone_number);
+            return ['status' => 'payment_initiated'];
+        }
+
+        if (in_array($textLower, ['menu', 'help', 'hi', 'hello', 'start'], true)) {
+            $this->sendMainMenu($subscriber->phone_number);
+            return ['status' => 'menu_sent'];
+        }
+
+        if (in_array($textLower, ['table', 'standings', 'groups'], true)) {
+            $this->sendStandings($subscriber->phone_number);
+            return ['status' => 'standings_sent'];
+        }
+
+        if (in_array($textLower, ['results', 'scores', 'today'], true)) {
+            $this->sendTodayResults($subscriber->phone_number);
+            return ['status' => 'results_sent'];
+        }
+
+        if (in_array($textLower, ['upcoming', 'schedule', 'fixtures'], true)) {
+            $this->sendUpcoming($subscriber->phone_number);
+            return ['status' => 'upcoming_sent'];
+        }
+
+        if ($textLower === 'next') {
+            $this->sendTeamNextMatch($subscriber->phone_number, $subscriber->favorite_team ?? '');
+            return ['status' => 'next_sent'];
+        }
+
+        // Everything else (free-form questions) requires a paid subscription
+        if ($subscriber->isFree()) {
+            return $this->sendPaywall($subscriber);
+        }
+
+        if (config('services.anthropic.qa_enabled', true)) {
+            return $this->handleAIQuestion($subscriber, $text);
+        }
+
+        $this->sendMainMenu($subscriber->phone_number);
+        return ['status' => 'menu_sent'];
+    }
+
+    protected function sendPaywall(Subscriber $subscriber): array
+    {
+        $cleanNumber = preg_replace('/[^0-9]/', '', $subscriber->phone_number);
+        $isKenyan = str_starts_with($cleanNumber, '254');
+
+        $msg = "🔒 *Premium Feature*\n\n";
+        $msg .= "AI Q&A and live match alerts are available to subscribers.\n\n";
+        $msg .= $isKenyan
+            ? "💳 Subscribe from *KES 49/match* or *KES 999* for the full tournament.\n\n"
+            : "💳 Subscribe from *\$0.99/match* or *\$9.99* for the full tournament.\n\n";
+        $msg .= "Reply *subscribe* to get started, or *demo* to try a free preview.";
+
+        $this->sendText($subscriber->phone_number, $msg);
+        return ['status' => 'paywall_sent'];
+    }
+
+    protected function sendStandings(string $phone): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $groups = $football->getStandings();
+
+        if (empty($groups)) {
+            return $this->sendText($phone, "⚽ Standings not available yet — group stage hasn't started. Reply *upcoming* to see fixtures!");
+        }
+
+        $msg = "🏆 *World Cup 2026 Standings*\n\n";
+        foreach ($groups as $group) {
+            $groupName = $group[0]['group'] ?? 'Group';
+            $msg .= "*{$groupName}*\n";
+            foreach ($group as $i => $team) {
+                $pos = $i + 1;
+                $flag = $pos <= 2 ? '🟢' : '⚪';
+                $msg .= "{$flag} {$pos}. {$team['team']['name']} — {$team['points']}pts ({$team['all']['win']}W {$team['all']['draw']}D {$team['all']['lose']}L)\n";
+            }
+            $msg .= "\n";
+        }
+        $msg .= "_Reply *results* for today's scores_";
+        return $this->sendText($phone, $msg);
+    }
+
+    protected function sendTodayResults(string $phone): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $matches = $football->getTodayResults();
+
+        if (empty($matches)) {
+            $upcoming = $football->getUpcomingMatches(1);
+            if (!empty($upcoming)) {
+                $next = $upcoming[0];
+                $kickoff = \Carbon\Carbon::parse($next['fixture']['date'])->setTimezone('Africa/Nairobi')->format('H:i');
+                $home = $next['teams']['home']['name'];
+                $away = $next['teams']['away']['name'];
+                return $this->sendText($phone, "📋 No matches played yet today.\n\n⏰ Next up: *{$home} vs {$away}* at {$kickoff} EAT\n\nReply *upcoming* for full schedule.");
+            }
+            return $this->sendText($phone, "📋 No matches today. Reply *upcoming* for the next fixtures.");
+        }
+
+        $msg = "📊 *Today's Results*\n\n";
+        foreach ($matches as $m) {
+            $home = $m['teams']['home']['name'];
+            $away = $m['teams']['away']['name'];
+            $hg = $m['goals']['home'] ?? '-';
+            $ag = $m['goals']['away'] ?? '-';
+            $status = $m['fixture']['status']['short'];
+            $elapsed = $m['fixture']['status']['elapsed'];
+            $statusLabel = match ($status) {
+                '1H', '2H' => "🔴 LIVE {$elapsed}'",
+                'HT' => '⏸ HT',
+                'FT' => '✅ FT',
+                'AET' => '✅ AET',
+                'PEN' => '✅ PEN',
+                default => $status,
+            };
+            $msg .= "⚽ *{$home} {$hg} - {$ag} {$away}* ({$statusLabel})\n";
+        }
+        $msg .= "\n_Reply *table* for standings_";
+        return $this->sendText($phone, $msg);
+    }
+
+    protected function sendUpcoming(string $phone): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $matches = $football->getUpcomingMatches(3);
+
+        if (empty($matches)) {
+            return $this->sendText($phone, "📅 No upcoming matches in the next 3 days. The tournament may be on a break!");
+        }
+
+        $msg = "📅 *Upcoming Fixtures*\n\n";
+        $lastDate = '';
+        foreach (array_slice($matches, 0, 8) as $m) {
+            $dt = \Carbon\Carbon::parse($m['fixture']['date'])->setTimezone('Africa/Nairobi');
+            $date = $dt->format('D d M');
+            $time = $dt->format('H:i');
+            $home = $m['teams']['home']['name'];
+            $away = $m['teams']['away']['name'];
+            $round = $m['league']['round'] ?? '';
+
+            if ($date !== $lastDate) {
+                $msg .= "\n*{$date}*\n";
+                $lastDate = $date;
+            }
+            $msg .= "⏰ {$time} EAT — {$home} vs {$away}\n";
+        }
+        $msg .= "\n_Reply *results* for today's scores | *table* for standings_";
+        return $this->sendText($phone, $msg);
+    }
+
+    protected function sendTeamNextMatch(string $phone, string $team): bool
+    {
+        if (empty(trim($team))) {
+            return $this->sendText($phone, "⚽ Which team? Try: *next Brazil* or *next Kenya*");
+        }
+
+        $football = app(\App\Services\Football\FootballDataService::class);
+        $match = $football->getTeamNextMatch($team);
+
+        if (!$match) {
+            return $this->sendText($phone, "🔍 No upcoming match found for *{$team}*. They may be eliminated or the team name may differ. Try the full name!");
+        }
+
+        $home = $match['teams']['home']['name'];
+        $away = $match['teams']['away']['name'];
+        $dt = \Carbon\Carbon::parse($match['fixture']['date'])->setTimezone('Africa/Nairobi');
+        $venue = $match['fixture']['venue']['name'] ?? 'TBD';
+        $city = $match['fixture']['venue']['city'] ?? '';
+        $round = $match['league']['round'] ?? '';
+        $diff = now()->diffForHumans($dt, ['parts' => 2]);
+
+        $msg = "📅 *{$home} vs {$away}*\n\n";
+        $msg .= "🗓 {$dt->format('D d M Y')}\n";
+        $msg .= "⏰ {$dt->format('H:i')} EAT ({$diff})\n";
+        $msg .= "🏟 {$venue}, {$city}\n";
+        $msg .= "🏆 {$round}\n\n";
+        $msg .= "_Reply *subscribe* to get live alerts for this match!_";
+
+        return $this->sendText($phone, $msg);
     }
 
     /**

@@ -3,7 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoalBot — World Cup Alerts</title>
+    <meta name="theme-color" content="#0a1628">
+
+    {{-- Primary SEO --}}
+    <title>GoalBot — Live World Cup 2026 Alerts on WhatsApp ⚽</title>
+    <meta name="description" content="Never miss a goal. Get instant World Cup 2026 alerts on WhatsApp — live scores, goals, red cards, AI commentary and match predictions. Subscribe from KES 49.">
+    <meta name="keywords" content="World Cup 2026, WhatsApp alerts, live scores, football notifications, GoalBot, Kenya, FIFA, soccer alerts, AI football">
+    <meta name="author" content="GoalBot">
+    <link rel="canonical" href="{{ url()->current() }}">
+
+    {{-- Open Graph (Facebook, WhatsApp, LinkedIn) --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GoalBot">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="Never miss a World Cup 2026 goal — live on your WhatsApp ⚽">
+    <meta property="og:description" content="AI-powered live alerts for every goal, red card & full-time score. Match predictions, instant updates, all on WhatsApp. From KES 49/day.">
+    <meta property="og:image" content="{{ asset('og-image.png') }}">
+    <meta property="og:image:secure_url" content="{{ asset('og-image.png') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="GoalBot — Live World Cup 2026 alerts on WhatsApp">
+    <meta property="og:locale" content="en_US">
+
+    {{-- Twitter / X --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Never miss a World Cup 2026 goal ⚽">
+    <meta name="twitter:description" content="Live goals, red cards & AI predictions delivered to your WhatsApp. From KES 49/day.">
+    <meta name="twitter:image" content="{{ asset('og-image.png') }}">
+    <meta name="twitter:image:alt" content="GoalBot — Live World Cup 2026 alerts on WhatsApp">
+
+    {{-- WhatsApp-specific (uses OG, but these help link previews load fast) --}}
+    <meta property="og:image:type" content="image/png">
+
+    {{-- Favicons --}}
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
+    {{-- Structured data for Google --}}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "GoalBot",
+      "description": "Live World Cup 2026 alerts delivered on WhatsApp — goals, red cards, AI commentary and match predictions.",
+      "provider": { "@type": "Organization", "name": "GoalBot", "url": "{{ url('/') }}" },
+      "areaServed": ["KE", "Worldwide"],
+      "offers": {
+        "@type": "Offer",
+        "price": "49",
+        "priceCurrency": "KES",
+        "description": "24-hour access to live World Cup 2026 alerts on WhatsApp"
+      }
+    }
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }

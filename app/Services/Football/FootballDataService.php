@@ -196,6 +196,71 @@ class FootballDataService
         return implode("\n", $lines);
     }
 
+    /**
+     * Get World Cup group standings
+     */
+    public function getStandings(): array
+    {
+        return Cache::remember('wc_standings', 600, function () {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key' => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/standings", [
+                    'league' => $this->getWorldCupLeagueId(),
+                    'season' => 2026,
+                ]);
+                return $response->successful() ? $response->json('response.0.league.standings', []) : [];
+            } catch (\Exception $e) {
+                Log::error('Standings error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get today's completed and live match results
+     */
+    public function getTodayResults(): array
+    {
+        $today = now()->toDateString();
+        $all = $this->getMatchesForDate($today);
+        return collect($all)->filter(fn($m) =>
+            in_array($m['fixture']['status']['short'] ?? '', ['FT', 'AET', 'PEN', '1H', '2H', 'HT', 'ET', 'LIVE'], true)
+        )->values()->toArray();
+    }
+
+    /**
+     * Get upcoming matches (not yet started)
+     */
+    public function getUpcomingMatches(int $days = 1): array
+    {
+        $fixtures = $this->getAllWorldCupFixtures();
+        $now = now();
+        $cutoff = now()->addDays($days);
+        return collect($fixtures)->filter(function ($m) use ($now, $cutoff) {
+            if (($m['fixture']['status']['short'] ?? '') !== 'NS') return false;
+            $date = \Carbon\Carbon::parse($m['fixture']['date']);
+            return $date->gte($now) && $date->lte($cutoff);
+        })->sortBy('fixture.date')->values()->toArray();
+    }
+
+    /**
+     * Find the next match for a specific team name (case-insensitive partial)
+     */
+    public function getTeamNextMatch(string $teamName): ?array
+    {
+        $fixtures = $this->getAllWorldCupFixtures();
+        $search = strtolower($teamName);
+        $now = now();
+        return collect($fixtures)->filter(function ($m) use ($search, $now) {
+            if (($m['fixture']['status']['short'] ?? '') !== 'NS') return false;
+            $home = strtolower($m['teams']['home']['name'] ?? '');
+            $away = strtolower($m['teams']['away']['name'] ?? '');
+            return str_contains($home, $search) || str_contains($away, $search);
+        })->sortBy('fixture.date')->first();
+    }
+
     private function getWorldCupLeagueId(): int
     {
         // World Cup league ID in API-Football

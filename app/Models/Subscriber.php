@@ -27,6 +27,9 @@ class Subscriber extends Model
         'utm_content',
         'attribution_ip',
         'country',
+        'subscription_type',
+        'subscription_expires_at',
+        'paid_at',
     ];
 
     protected $casts = [
@@ -36,19 +39,55 @@ class Subscriber extends Model
         'is_active' => 'boolean',
         'demo_mode' => 'boolean',
         'demo_started_at' => 'datetime',
+        'subscription_expires_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
+
+    /**
+     * True if the subscriber has an active paid subscription.
+     * full_tournament: never expires (covers whole WC).
+     * per_match: expires_at is set per-match window.
+     */
+    public function isPaid(): bool
+    {
+        if ($this->subscription_type === 'full_tournament') {
+            return true;
+        }
+
+        if ($this->subscription_type === 'per_match') {
+            return $this->subscription_expires_at && $this->subscription_expires_at->isFuture();
+        }
+
+        return false;
+    }
+
+    public function isFree(): bool
+    {
+        return ! $this->isPaid();
+    }
 
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
     }
 
+    /**
+     * Subscribers who want alerts for this match AND have a valid paid subscription.
+     */
     public function scopeInterestedInMatch($query, string $homeTeam, string $awayTeam)
     {
         return $query->where(function ($q) use ($homeTeam, $awayTeam) {
             $q->where('favorite_team', $homeTeam)
               ->orWhere('favorite_team', $awayTeam)
               ->orWhere('notify_all_matches', true);
-        })->where('notifications_enabled', true);
+        })
+        ->where('notifications_enabled', true)
+        ->where(function ($q) {
+            $q->where('subscription_type', 'full_tournament')
+              ->orWhere(function ($q2) {
+                  $q2->where('subscription_type', 'per_match')
+                     ->where('subscription_expires_at', '>', now());
+              });
+        });
     }
 }

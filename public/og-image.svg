@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1628"/>
+      <stop offset="50%" stop-color="#1a3a5c"/>
+      <stop offset="100%" stop-color="#0d2137"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00d2ff"/>
+      <stop offset="100%" stop-color="#3a7bd5"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative pitch lines -->
+  <g stroke="rgba(255,255,255,0.04)" stroke-width="2" fill="none">
+    <circle cx="1050" cy="500" r="180"/>
+    <circle cx="1050" cy="500" r="120"/>
+    <line x1="1050" y1="320" x2="1050" y2="680"/>
+  </g>
+
+  <!-- Glow orb -->
+  <circle cx="980" cy="180" r="120" fill="#00d2ff" opacity="0.12" filter="url(#glow)"/>
+
+  <!-- Brand -->
+  <g transform="translate(80, 80)">
+    <text font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="600" fill="#00d2ff">⚽ GOALBOT</text>
+  </g>
+
+  <!-- Headline -->
+  <g transform="translate(80, 200)">
+    <text font-family="Inter, -apple-system, sans-serif" font-size="68" font-weight="700" fill="#ffffff" letter-spacing="-2">
+      <tspan x="0" dy="0">Never miss a</tspan>
+      <tspan x="0" dy="82" fill="url(#accent)">World Cup goal.</tspan>
+    </text>
+  </g>
+
+  <!-- Subhead -->
+  <g transform="translate(80, 400)">
+    <text font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="rgba(255,255,255,0.75)">
+      <tspan x="0" dy="0">Live alerts • AI commentary • Match predictions</tspan>
+      <tspan x="0" dy="42">— all on WhatsApp.</tspan>
+    </text>
+  </g>
+
+  <!-- CTA pill -->
+  <g transform="translate(80, 520)">
+    <rect width="280" height="64" rx="32" fill="#25D366"/>
+    <text x="140" y="42" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#0a1628">💬 Start on WhatsApp</text>
+  </g>
+
+  <!-- Price tag -->
+  <g transform="translate(390, 520)">
+    <rect width="220" height="64" rx="32" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+    <text x="110" y="42" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#ffffff">From KES 49/day</text>
+  </g>
+
+  <!-- Trophy icon -->
+  <g transform="translate(950, 250)" opacity="0.9">
+    <text font-size="220" text-anchor="middle">🏆</text>
+  </g>
+</svg>

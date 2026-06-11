@@ -14,6 +14,9 @@ Schedule::command('matches:poll')->everyMinute();
 // Send reminders every 5 minutes (will only send when matches are ~2h away)
 Schedule::command('reminders:send')->everyFiveMinutes();
 
+// Morning digest at 8:00 AM EAT (= 05:00 UTC) every day
+Schedule::command('digest:morning')->dailyAt('05:00')->timezone('UTC')->withoutOverlapping();
+
 // Refresh RAG fixtures cache (used by AI Q&A).
 // Runs every minute, but command only calls API when:
 //   - A match is live (refreshes every 1 min)
