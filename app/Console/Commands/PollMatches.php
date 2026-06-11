@@ -157,72 +157,46 @@ class PollMatches extends Command
         $status   = $match['fixture']['status']['short'] ?? '';
 
         // Only during live play
-        if (!in_array($status, ['1H', '2H', 'ET', 'HT'], true)) return;
+        if (!in_array($status, ['1H', '2H', 'ET'], true)) return;
 
         $football = app(FootballDataService::class);
         $lsSlug   = $football->getLiveScoreFullSlug($homeTeam, $awayTeam, $matchId);
         if (!$lsSlug) return;
 
-        $commentary = app(LiveScoreCommentaryService::class);
-        $highlights = $commentary->getHighlights($lsSlug, 20);
-
-        if (empty($highlights)) return;
-
+        $commentary  = app(LiveScoreCommentaryService::class);
         $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
         if ($subscribers->isEmpty()) return;
 
-        // On first poll for this match, seed ALL current entries as seen so we
-        // never send historical commentary — only future new ones.
-        $seededKey = "commentary_seeded_{$matchId}";
-        $isFirstPoll = !Notification::where('match_id', $matchId)
-            ->where('event_type', 'like', 'commentary_%')
-            ->exists();
-
-        if ($isFirstPoll) {
+        // On first poll: mark ALL current entries as seen (cache-based, no DB write)
+        // so we never retroactively send old commentary.
+        $seededCacheKey = "commentary_seeded_{$matchId}";
+        if (!\Illuminate\Support\Facades\Cache::has($seededCacheKey)) {
             $allEntries = $commentary->getCommentary($lsSlug);
             foreach ($allEntries as $entry) {
-                $hash      = 'commentary_' . md5($matchId . $entry['time'] . $entry['text']);
-                $eventType = "commentary_{$hash}";
-                // Seed with first subscriber as a sentinel — status 'seeded'
-                Notification::firstOrCreate([
-                    'subscriber_id' => $subscribers->first()->id,
-                    'match_id'      => $matchId,
-                    'event_type'    => $eventType,
-                ], [
-                    'message' => $entry['text'],
-                    'sent_at' => now(),
-                    'status'  => 'seeded',
-                ]);
+                $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
+                \Illuminate\Support\Facades\Cache::put($lockKey, true, now()->addHours(6));
             }
-            $this->info("  Seeded " . count($allEntries) . " existing commentary entries (not sent)");
+            \Illuminate\Support\Facades\Cache::put($seededCacheKey, true, now()->addHours(6));
+            $this->info("  Seeded " . count($allEntries) . " existing commentary entries");
             return;
         }
 
-        // Normal run — only send entries not yet in the DB
+        // Normal run — send only highlights not yet locked
+        $highlights = $commentary->getHighlights($lsSlug, 20);
         $sent = 0;
+
         foreach ($highlights as $entry) {
-            $hash      = 'commentary_' . md5($matchId . $entry['time'] . $entry['text']);
-            $eventType = "commentary_{$hash}";
+            $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
 
-            $alreadySent = Notification::where('match_id', $matchId)
-                ->where('event_type', $eventType)
-                ->exists();
-
-            if ($alreadySent) continue;
+            // Atomic: only proceed if we can set the lock (wasn't already sent)
+            if (\Illuminate\Support\Facades\Cache::has($lockKey)) continue;
+            \Illuminate\Support\Facades\Cache::put($lockKey, true, now()->addHours(6));
 
             $minute = $entry['time'];
             $text   = $entry['text'];
             $msg    = "⚽ *{$minute}* — {$text}";
 
             foreach ($subscribers as $sub) {
-                Notification::create([
-                    'subscriber_id' => $sub->id,
-                    'match_id'      => $matchId,
-                    'event_type'    => $eventType,
-                    'message'       => $msg,
-                    'sent_at'       => now(),
-                    'status'        => 'sent',
-                ]);
                 $whatsapp->sendAlert($sub->phone_number, $msg);
                 usleep(100000);
                 $sent++;
