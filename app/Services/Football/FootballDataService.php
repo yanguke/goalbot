@@ -193,6 +193,41 @@ class FootballDataService
             $lines[] = "- {$date} | {$round} | {$home} vs {$away}{$score} | {$venue}, {$city} | Status: {$status}";
         }
 
+        // Append lineups for any live or today's match
+        $liveAndToday = array_merge(
+            $this->getLiveMatches(),
+            $this->getMatchesForDate(now()->toDateString())
+        );
+        $seen = [];
+        foreach ($liveAndToday as $f) {
+            $fId = $f['fixture']['id'];
+            if (in_array($fId, $seen, true)) continue;
+            $seen[] = $fId;
+
+            $lineups = $this->getLineups($fId);
+            if (empty($lineups)) continue;
+
+            $home = $f['teams']['home']['name'] ?? '?';
+            $away = $f['teams']['away']['name'] ?? '?';
+            $lines[] = "";
+            $lines[] = "LINEUPS — {$home} vs {$away}:";
+
+            foreach ($lineups as $team) {
+                $tName     = $team['team']['name'];
+                $formation = $team['formation'] ?? 'unknown';
+                $starters  = collect($team['startXI'] ?? [])
+                    ->map(fn($p) => $p['player']['name'] . ' (#' . $p['player']['number'] . ')')
+                    ->implode(', ');
+                $bench = collect($team['substitutes'] ?? [])
+                    ->map(fn($p) => $p['player']['name'])
+                    ->implode(', ');
+                $lines[] = "  {$tName} [{$formation}] Starters: {$starters}";
+                if ($bench) {
+                    $lines[] = "  {$tName} Bench: {$bench}";
+                }
+            }
+        }
+
         return implode("\n", $lines);
     }
 
