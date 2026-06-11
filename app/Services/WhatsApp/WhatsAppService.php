@@ -691,15 +691,40 @@ class WhatsAppService
      */
     protected function handleAIQuestion(Subscriber $subscriber, string $question): array
     {
-        $answer = $this->askClaude($question);
+        $answer = $this->askClaude($question, $subscriber->phone_number);
         $this->sendText($subscriber->phone_number, $answer);
+
+        // Save to conversation history for follow-up context
+        $this->appendConversation($subscriber->phone_number, $question, $answer);
+
         return ['status' => 'ai_answered'];
     }
 
     /**
-     * Ask Claude a World Cup question (RAG: includes live fixtures context)
+     * Get recent conversation history for a user
      */
-    protected function askClaude(string $question): string
+    protected function getConversationHistory(string $phoneNumber): array
+    {
+        return \Illuminate\Support\Facades\Cache::get("ai_chat_{$phoneNumber}", []);
+    }
+
+    /**
+     * Append a Q&A turn to conversation history (keeps last 6 messages = 3 turns)
+     */
+    protected function appendConversation(string $phoneNumber, string $userMsg, string $assistantMsg): void
+    {
+        $history = $this->getConversationHistory($phoneNumber);
+        $history[] = ['role' => 'user', 'content' => $userMsg];
+        $history[] = ['role' => 'assistant', 'content' => $assistantMsg];
+        // Keep only last 6 messages (3 turns) to manage context size
+        $history = array_slice($history, -6);
+        \Illuminate\Support\Facades\Cache::put("ai_chat_{$phoneNumber}", $history, now()->addMinutes(30));
+    }
+
+    /**
+     * Ask Claude a World Cup question (RAG: includes live fixtures + conversation history)
+     */
+    protected function askClaude(string $question, ?string $phoneNumber = null): string
     {
         $apiKey = config('services.anthropic.key');
 
@@ -739,9 +764,10 @@ class WhatsAppService
                 'model' => config('services.anthropic.model', 'claude-haiku-4-5'),
                 'max_tokens' => 400,
                 'system' => $systemPrompt,
-                'messages' => [
-                    ['role' => 'user', 'content' => $question]
-                ],
+                'messages' => array_merge(
+                    $phoneNumber ? $this->getConversationHistory($phoneNumber) : [],
+                    [['role' => 'user', 'content' => $question]]
+                ),
                 'temperature' => 0.7,
             ]);
 
