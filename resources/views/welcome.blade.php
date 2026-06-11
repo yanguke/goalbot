@@ -362,14 +362,14 @@
         
         <section class="hero">
             <div class="hero-content">
-                <h1>World Cup alerts, delivered.</h1>
-                <p class="subtitle"><strong>AI-powered commentary</strong> with context and personality. Not just scores—insights, stats, and storytelling.</p>
+                <h1>Never miss a World Cup moment.</h1>
+                <p class="subtitle">Live goals, red cards & AI commentary — delivered straight to your <strong>WhatsApp</strong>. Tournament is live now. ⚽</p>
                 
                 <div class="pricing">
-                    <div class="price">{{ $pricing['per_match_label'] ?? '$0.99' }} <span>/ match</span></div>
-                    <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">or {{ $pricing['full_label'] ?? '$9.99' }} full tournament</div>
+                    <div class="price">{{ $pricing['per_match_label'] ?? '$0.99' }} <span>/ day</span></div>
+                    <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">or {{ $pricing['full_label'] ?? '$9.99' }} — full tournament 🏆</div>
                     @if(!empty($pricing['is_kenya']))
-                        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #4ade80;">🇰🇪 M-Pesa supported</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #4ade80;">🇰🇪 Pay via M-Pesa</div>
                     @endif
                 </div>
                 
@@ -381,22 +381,25 @@
                     'utm_content' => request('utm_content'),
                 ])) }}" class="cta">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    Get Started
+                    Get Alerts Now
                 </a>
                 
                 <p style="margin-top: 1rem; font-size: 0.875rem; color: rgba(255,255,255,0.6);">
-                    Or text <strong>GOAL</strong> to <strong>+254 715 333 355</strong> on WhatsApp
+                    Or send <strong>GOAL</strong> on WhatsApp to <strong>+254 715 333 355</strong>
+                </p>
+                <p style="margin-top: 0.5rem; font-size: 0.8rem; color: #4ade80; font-weight: 500;">
+                    ✓ No app download &nbsp;✓ Cancel anytime &nbsp;✓ Works on any phone
                 </p>
                 
                 <div class="features-list">
                     <h3>What's included</h3>
                     <div class="features-grid">
-                        <div class="feature-item">AI-crafted alerts</div>
-                        <div class="feature-item">Smart context</div>
-                        <div class="feature-item">Half-time scores</div>
-                        <div class="feature-item">Full-time results</div>
-                        <div class="feature-item">Penalty notifications</div>
-                        <div class="feature-item">Match reminders</div>
+                        <div class="feature-item">Instant goal alerts</div>
+                        <div class="feature-item">AI match commentary</div>
+                        <div class="feature-item">Red cards & penalties</div>
+                        <div class="feature-item">Half & full-time scores</div>
+                        <div class="feature-item">Pre-match predictions</div>
+                        <div class="feature-item">Morning digest 8 AM</div>
                     </div>
                 </div>
             </div>
@@ -437,15 +440,19 @@
         </section>
         
         <div class="meta">
-            <div class="meta-left">World Cup 2026 ⚽ Send GOAL to +254 715 333 355</div>
+            <div class="meta-left">World Cup 2026 is LIVE ⚽ &nbsp;Send GOAL to +254 715 333 355</div>
             <div class="meta-right">
                 <div class="meta-item">
                     <strong>104</strong>
                     <span>Matches</span>
                 </div>
                 <div class="meta-item">
-                    <strong>&lt;1s</strong>
-                    <span>Latency</span>
+                    <strong>&lt;5s</strong>
+                    <span>Alert speed</span>
+                </div>
+                <div class="meta-item">
+                    <strong>KES 49</strong>
+                    <span>Per day</span>
                 </div>
             </div>
         </div>
