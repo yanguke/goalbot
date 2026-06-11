@@ -149,21 +149,48 @@ class PollMatches extends Command
         $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
         if ($subscribers->isEmpty()) return;
 
+        // On first poll for this match, seed ALL current entries as seen so we
+        // never send historical commentary — only future new ones.
+        $seededKey = "commentary_seeded_{$matchId}";
+        $isFirstPoll = !Notification::where('match_id', $matchId)
+            ->where('event_type', 'like', 'commentary_%')
+            ->exists();
+
+        if ($isFirstPoll) {
+            $allEntries = $commentary->getCommentary($lsSlug);
+            foreach ($allEntries as $entry) {
+                $hash      = 'commentary_' . md5($matchId . $entry['time'] . $entry['text']);
+                $eventType = "commentary_{$hash}";
+                // Seed with first subscriber as a sentinel — status 'seeded'
+                Notification::firstOrCreate([
+                    'subscriber_id' => $subscribers->first()->id,
+                    'match_id'      => $matchId,
+                    'event_type'    => $eventType,
+                ], [
+                    'message' => $entry['text'],
+                    'sent_at' => now(),
+                    'status'  => 'seeded',
+                ]);
+            }
+            $this->info("  Seeded " . count($allEntries) . " existing commentary entries (not sent)");
+            return;
+        }
+
+        // Normal run — only send entries not yet in the DB
         $sent = 0;
         foreach ($highlights as $entry) {
             $hash      = 'commentary_' . md5($matchId . $entry['time'] . $entry['text']);
             $eventType = "commentary_{$hash}";
 
-            // Check if already sent to anyone (use first subscriber as proxy — either all got it or none)
             $alreadySent = Notification::where('match_id', $matchId)
                 ->where('event_type', $eventType)
                 ->exists();
 
             if ($alreadySent) continue;
 
-            $minute  = $entry['time'];
-            $text    = $entry['text'];
-            $msg     = "⚽ *{$minute}* — {$text}";
+            $minute = $entry['time'];
+            $text   = $entry['text'];
+            $msg    = "⚽ *{$minute}* — {$text}";
 
             foreach ($subscribers as $sub) {
                 Notification::create([
