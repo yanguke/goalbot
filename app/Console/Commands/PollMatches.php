@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollMatches extends Command
 {
-    protected $signature = 'matches:poll';
+    protected $signature   = 'matches:poll {--interval=15 : Seconds between polls within the cron minute}';
     protected $description = 'Poll live matches and send notifications for events';
     
     private int $notificationCount = 0;
@@ -26,16 +26,42 @@ class PollMatches extends Command
         AIMessageGenerator $ai,
         MessageSender $whatsapp
     ): int {
-        $this->info('Polling matches...');
+        $interval  = max(10, (int) $this->option('interval')); // minimum 10s
+        $duration  = 58; // run for 58s so we finish before next cron tick
+        $startedAt = time();
 
+        $this->info("Polling every {$interval}s for {$duration}s...");
+
+        do {
+            $this->runOnce($football, $detector, $ai, $whatsapp);
+
+            $elapsed   = time() - $startedAt;
+            $remaining = $duration - $elapsed;
+
+            if ($remaining > $interval) {
+                $this->info("  Sleeping {$interval}s (elapsed {$elapsed}s)...");
+                sleep($interval);
+            } else {
+                break;
+            }
+        } while (true);
+
+        $this->info("Done. Sent {$this->notificationCount} total notifications.");
+        return self::SUCCESS;
+    }
+
+    private function runOnce(
+        FootballDataService $football,
+        MatchEventDetector $detector,
+        AIMessageGenerator $ai,
+        MessageSender $whatsapp
+    ): void {
         $today = now()->format('Y-m-d');
 
         // Merge today's scheduled matches with live matches endpoint
-        // (date endpoint can lag and still show NS even after kickoff)
         $todayMatches = $football->getMatchesForDate($today);
         $liveMatches  = $football->getLiveMatches();
 
-        // Merge, keyed by fixture ID so live version overwrites stale NS version
         $merged = collect($todayMatches)->keyBy(fn($m) => $m['fixture']['id']);
         foreach ($liveMatches as $live) {
             $merged->put($live['fixture']['id'], $live);
@@ -44,18 +70,14 @@ class PollMatches extends Command
 
         if (empty($matches)) {
             $this->warn("No matches found for {$today}");
-            return self::SUCCESS;
+            return;
         }
 
-        $this->info("Found " . count($matches) . " matches for today (" . count($liveMatches) . " live)");
-        
+        $this->info("Found " . count($matches) . " matches (" . count($liveMatches) . " live) @ " . now()->format('H:i:s'));
+
         foreach ($matches as $match) {
             $this->processMatch($match, $detector, $ai, $whatsapp);
         }
-        
-        $this->info("Sent {$this->notificationCount} notifications");
-        
-        return self::SUCCESS;
     }
     
     private function processMatch(
