@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Webhook;
 
 use App\Http\Controllers\Controller;
-use App\Services\WhatsApp\MessageSender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -12,26 +11,33 @@ class WhatsAppVerifyController extends Controller
     /**
      * Handle WhatsApp webhook verification from Meta
      */
-    public function verify(Request $request, MessageSender $sender): mixed
+    public function verify(Request $request): mixed
     {
-        $mode = $request->input('hub.mode');
-        $token = $request->input('hub.verify_token');
-        $challenge = $request->input('hub.challenge');
-        
+        $mode      = $request->query('hub_mode') ?? $request->query('hub.mode');
+        $token     = $request->query('hub_verify_token') ?? $request->query('hub.verify_token');
+        $challenge = $request->query('hub_challenge') ?? $request->query('hub.challenge');
+
+        // Laravel's ConvertEmptyStringsToNull can blank dotted keys — read raw
+        $raw = $request->server('QUERY_STRING', '');
+        parse_str($raw, $params);
+        $mode      = $mode      ?? ($params['hub.mode']         ?? null);
+        $token     = $token     ?? ($params['hub.verify_token'] ?? null);
+        $challenge = $challenge ?? ($params['hub.challenge']    ?? null);
+
+        $expectedToken = config('services.whatsapp.verify_token');
+
         Log::info('WhatsApp webhook verification attempt', [
-            'mode' => $mode,
-            'token' => $token,
+            'mode' => $mode, 'token' => $token, 'expected' => $expectedToken,
         ]);
-        
-        // Verify the subscription
-        $response = $sender->verifyWebhook($token, $challenge);
-        
-        if ($response !== null) {
+
+        if ($mode === 'subscribe' && $token === $expectedToken && $challenge) {
             Log::info('WhatsApp webhook verified successfully');
-            return response($response, 200);
+            return response((string) $challenge, 200);
         }
-        
-        Log::warning('WhatsApp webhook verification failed');
+
+        Log::warning('WhatsApp webhook verification failed', [
+            'mode' => $mode, 'token_match' => ($token === $expectedToken),
+        ]);
         return response('Verification failed', 403);
     }
 }
