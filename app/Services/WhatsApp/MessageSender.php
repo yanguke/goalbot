@@ -112,12 +112,11 @@ class MessageSender
     }
     
     /**
-     * Send match alert using pre-approved template
+     * Send match alert as a plain text message
      */
     public function sendAlert(string $to, string $message): bool
     {
-        // Use template for guaranteed delivery
-        return $this->sendTemplate($to, 'match_alert', [$message]);
+        return $this->sendText($to, $message);
     }
     
     /**
