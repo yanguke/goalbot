@@ -65,13 +65,18 @@ class LandingPageController extends Controller
     {
         $visit = $this->recordVisit($request, 'cta_click');
 
-        $base = $request->query('text', 'goal');
-        // Append attribution token (e.g. "goal r=123") so webhook can attribute
-        $msg = $visit ? "{$base} r={$visit->id}" : $base;
+        // Store visit ID in a cookie for attribution (no token in the WA message)
         $phone = config('services.whatsapp.phone_number', '254715333355');
-        $url = "https://wa.me/{$phone}?text=" . urlencode($msg);
+        $msg   = 'Hi';
+        $url   = "https://wa.me/{$phone}?text=" . urlencode($msg);
 
-        return redirect()->away($url, 302);
+        $response = redirect()->away($url, 302);
+
+        if ($visit) {
+            $response->withCookie(cookie('_gb_vid', $visit->id, 60 * 24 * 7, '/', null, true, false));
+        }
+
+        return $response;
     }
 
     /**
