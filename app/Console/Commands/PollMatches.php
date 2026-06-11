@@ -137,29 +137,32 @@ class PollMatches extends Command
         
         foreach ($subscribers as $subscriber) {
             try {
-                // Generate personalized message
-                $message = $ai->generate($eventType, $eventData, $subscriber->favorite_team);
-                
-                // Record notification
-                Notification::create([
-                    'subscriber_id' => $subscriber->id,
-                    'match_id' => $matchId,
-                    'event_type' => $eventType,
-                    'message' => $message,
-                    'sent_at' => now(),
-                    'status' => 'pending',
-                ]);
-                
-                // Send via WhatsApp
-                $success = $whatsapp->sendAlert($subscriber->phone_number, $message);
-                
-                // Update status
-                Notification::where('subscriber_id', $subscriber->id)
+                // Dedup — never send the same event twice to the same subscriber
+                $alreadySent = Notification::where('subscriber_id', $subscriber->id)
                     ->where('match_id', $matchId)
                     ->where('event_type', $eventType)
-                    ->latest()
-                    ->first()
-                    ?->update(['status' => $success ? 'sent' : 'failed']);
+                    ->exists();
+
+                if ($alreadySent) {
+                    $this->line("  Skipping {$eventType} for {$subscriber->phone_number} (already sent)");
+                    continue;
+                }
+
+                // Generate personalized message
+                $message = $ai->generate($eventType, $eventData, $subscriber->favorite_team);
+
+                // Record + send atomically
+                $notification = Notification::create([
+                    'subscriber_id' => $subscriber->id,
+                    'match_id'      => $matchId,
+                    'event_type'    => $eventType,
+                    'message'       => $message,
+                    'sent_at'       => now(),
+                    'status'        => 'pending',
+                ]);
+
+                $success = $whatsapp->sendAlert($subscriber->phone_number, $message);
+                $notification->update(['status' => $success ? 'sent' : 'failed']);
                 
                 if ($success) {
                     $this->notificationCount++;
