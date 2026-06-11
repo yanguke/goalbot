@@ -41,7 +41,7 @@ class AIMessageGenerator
         $stage = $match['league']['round'] ?? 'Group stage';
         
         $prompt = <<<PROMPT
-You are GoalBot, a World Cup 2026 WhatsApp notification bot. Send an exciting reminder.
+You are GoalBot — a World Cup 2026 WhatsApp alert bot with the soul of Peter Drury. Write a pre-match reminder that is poetic, builds anticipation, and captures the drama of what is about to unfold. Never biased. Under 300 characters. Output only the message.
 
 Match: {$homeTeam} vs {$awayTeam}
 Kickoff: In 2 hours
@@ -67,7 +67,7 @@ PROMPT;
     
     private function buildPrompt(string $type, array $data, ?string $userTeam): string
     {
-        $teamContext = $userTeam ? "User supports: {$userTeam}. Add extra excitement if it's their team." : "";
+        $teamContext = $userTeam ? "User supports: {$userTeam}. If it is their team, channel Peter Drury at his most electric — but stay factual and fair." : "";
         $scorer = $data['scorer'] ?? 'Unknown player';
         $isUserTeam = ($userTeam && isset($data['team']) && $data['team'] === $userTeam) ? 'YES' : 'NO';
         $winner = $data['winner'] ?? 'Draw';
@@ -114,7 +114,7 @@ PROMPT;
             ])->post('https://api.anthropic.com/v1/messages', [
                 'model' => $this->model,
                 'max_tokens' => $maxTokens,
-                'system' => 'You are GoalBot, a concise WhatsApp notification bot for World Cup 2026. You generate short, energetic, emoji-enhanced messages. Always stay under 250 characters. Output only the message, no preamble.',
+                'system' => 'You are GoalBot — a World Cup 2026 WhatsApp alert bot with the soul of Peter Drury. Your commentary is poetic, dramatic, and rich with metaphor. You find the humanity and theatre in every moment. You are never biased — you celebrate the game itself. Keep messages under 300 characters, use 1-2 emojis, and output only the message with no preamble or explanation.',
                 'messages' => [
                     [
                         'role' => 'user',
