@@ -5,6 +5,7 @@ namespace App\Services\Football;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class FootballDataService
 {
@@ -320,6 +321,17 @@ class FootballDataService
                     $lines[] = "  {$market}: " . implode(' | ', $parts);
                 }
             }
+
+            // --- LiveScore commentary ---
+            $lsSlug = $this->getLiveScoreFullSlug($home, $away, $fId);
+            if ($lsSlug) {
+                $commentarySvc = app(LiveScoreCommentaryService::class);
+                $commentaryContext = $commentarySvc->buildCommentaryContext($lsSlug, 25);
+                if ($commentaryContext) {
+                    $lines[] = "";
+                    $lines[] = $commentaryContext;
+                }
+            }
         }
 
         return implode("\n", $lines);
@@ -509,6 +521,27 @@ class FootballDataService
         // Fall back to today's first match
         $today = $this->getMatchesForDate(now()->toDateString());
         return !empty($today) ? ($today[0]['fixture']['id'] ?? null) : null;
+    }
+
+    /**
+     * Get full LiveScore slug: "team-a-vs-team-b/LIVESCORE_ID"
+     * LiveScore ID must be registered via registerLiveScoreId().
+     */
+    public function getLiveScoreFullSlug(string $home, string $away, int $fixtureId): ?string
+    {
+        $lsId = Cache::get("livescore_id_{$fixtureId}");
+        if (!$lsId) return null;
+        $teamSlug = Str::slug($home) . '-vs-' . Str::slug($away);
+        return "{$teamSlug}/{$lsId}";
+    }
+
+    /**
+     * Register a LiveScore match ID against an API-Football fixture ID.
+     * Call this once per match (e.g. from admin or a mapping config).
+     */
+    public function registerLiveScoreId(int $fixtureId, string $liveScoreId): void
+    {
+        Cache::put("livescore_id_{$fixtureId}", $liveScoreId, 86400);
     }
 
     private function getWorldCupLeagueId(): int
