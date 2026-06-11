@@ -27,6 +27,7 @@ class SendReminders extends Command
         // Reminder windows — running every 5 min, each window is wider than the interval
         // to guarantee every match gets exactly one notification per milestone
         $windows = [
+            ['label' => '5 minutes',  'from' => now()->addMinutes(5),  'to' => now()->addMinutes(11)],
             ['label' => '10 minutes', 'from' => now()->addMinutes(10), 'to' => now()->addMinutes(16)],
             ['label' => '15 minutes', 'from' => now()->addMinutes(15), 'to' => now()->addMinutes(21)],
             ['label' => '1 hour',     'from' => now()->addMinutes(60), 'to' => now()->addMinutes(75)],
@@ -100,7 +101,7 @@ class SendReminders extends Command
                     : $reminder;
 
                 // Prepend urgency header for short windows
-                $urgencyPrefix = in_array($windowLabel, ['10 minutes', '15 minutes'])
+                $urgencyPrefix = in_array($windowLabel, ['5 minutes', '10 minutes', '15 minutes'])
                     ? "⏰ *{$homeTeam} vs {$awayTeam} kicks off in {$windowLabel}!*\n\n"
                     : '';
                 $personalizedReminder = $urgencyPrefix . $base;
