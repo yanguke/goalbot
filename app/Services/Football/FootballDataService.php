@@ -193,37 +193,90 @@ class FootballDataService
             $lines[] = "- {$date} | {$round} | {$home} vs {$away}{$score} | {$venue}, {$city} | Status: {$status}";
         }
 
-        // Append lineups for any live or today's match
-        $liveAndToday = array_merge(
-            $this->getLiveMatches(),
-            $this->getMatchesForDate(now()->toDateString())
-        );
+        // Append full live context for each live/today match
+        $liveMatches  = $this->getLiveMatches();
+        $todayMatches = $this->getMatchesForDate(now()->toDateString());
+        $merged = collect($todayMatches)->keyBy(fn($m) => $m['fixture']['id']);
+        foreach ($liveMatches as $lm) {
+            $merged->put($lm['fixture']['id'], $lm);
+        }
+
         $seen = [];
-        foreach ($liveAndToday as $f) {
-            $fId = $f['fixture']['id'];
+        foreach ($merged->values() as $f) {
+            $fId   = $f['fixture']['id'];
             if (in_array($fId, $seen, true)) continue;
             $seen[] = $fId;
 
-            $lineups = $this->getLineups($fId);
-            if (empty($lineups)) continue;
+            $home   = $f['teams']['home']['name'] ?? '?';
+            $away   = $f['teams']['away']['name'] ?? '?';
+            $status = $f['fixture']['status']['short'] ?? 'NS';
+            $minute = $f['fixture']['status']['elapsed'] ?? null;
+            $hGoals = $f['goals']['home'] ?? 0;
+            $aGoals = $f['goals']['away'] ?? 0;
 
-            $home = $f['teams']['home']['name'] ?? '?';
-            $away = $f['teams']['away']['name'] ?? '?';
             $lines[] = "";
-            $lines[] = "LINEUPS — {$home} vs {$away}:";
+            $lines[] = "=== LIVE MATCH: {$home} vs {$away} | {$hGoals}-{$aGoals} | {$status}" . ($minute ? " {$minute}'" : '') . " ===";
 
-            foreach ($lineups as $team) {
-                $tName     = $team['team']['name'];
-                $formation = $team['formation'] ?? 'unknown';
-                $starters  = collect($team['startXI'] ?? [])
-                    ->map(fn($p) => $p['player']['name'] . ' (#' . $p['player']['number'] . ')')
-                    ->implode(', ');
-                $bench = collect($team['substitutes'] ?? [])
-                    ->map(fn($p) => $p['player']['name'])
-                    ->implode(', ');
-                $lines[] = "  {$tName} [{$formation}] Starters: {$starters}";
-                if ($bench) {
-                    $lines[] = "  {$tName} Bench: {$bench}";
+            // --- Lineups ---
+            $lineups = $this->getLineups($fId);
+            if (!empty($lineups)) {
+                $lines[] = "LINEUPS:";
+                foreach ($lineups as $team) {
+                    $tName     = $team['team']['name'];
+                    $formation = $team['formation'] ?? '?';
+                    $starters  = collect($team['startXI'] ?? [])
+                        ->map(fn($p) => $p['player']['name'] . ' (#' . $p['player']['number'] . ')')
+                        ->implode(', ');
+                    $bench = collect($team['substitutes'] ?? [])
+                        ->map(fn($p) => $p['player']['name'])
+                        ->implode(', ');
+                    $lines[] = "  {$tName} [{$formation}]: {$starters}";
+                    if ($bench) $lines[] = "  {$tName} Bench: {$bench}";
+                }
+            }
+
+            // --- Events (goals, cards, subs) ---
+            $events = $this->getMatchEvents($fId);
+            if (!empty($events)) {
+                $lines[] = "MATCH EVENTS:";
+                foreach ($events as $e) {
+                    $min    = $e['time']['elapsed'] ?? '?';
+                    $type   = $e['type'] ?? '?';
+                    $detail = $e['detail'] ?? '';
+                    $team   = $e['team']['name'] ?? '?';
+                    $player = $e['player']['name'] ?? '?';
+                    $assist = $e['assist']['name'] ?? null;
+
+                    if ($type === 'Goal') {
+                        $lines[] = "  {$min}' GOAL — {$team} | {$player}" . ($assist ? " (assist: {$assist})" : '');
+                    } elseif ($type === 'Card') {
+                        $lines[] = "  {$min}' {$detail} — {$team} | {$player}";
+                    } elseif ($type === 'subst') {
+                        $lines[] = "  {$min}' SUB — {$team} | OFF: {$player}" . ($assist ? " ON: {$assist}" : '');
+                    } else {
+                        $lines[] = "  {$min}' {$type} {$detail} — {$team} | {$player}";
+                    }
+                }
+            }
+
+            // --- Live stats ---
+            $stats = $this->getLiveStats($fId);
+            if (!empty($stats)) {
+                $lines[] = "LIVE STATS:";
+                $statMap = [];
+                foreach ($stats as $teamStats) {
+                    $tName = $teamStats['team']['name'];
+                    foreach ($teamStats['statistics'] ?? [] as $s) {
+                        $statMap[$s['type']][$tName] = $s['value'] ?? '-';
+                    }
+                }
+                $show = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards', 'Offsides'];
+                foreach ($show as $stat) {
+                    if (isset($statMap[$stat])) {
+                        $hv = $statMap[$stat][$home] ?? '-';
+                        $av = $statMap[$stat][$away] ?? '-';
+                        $lines[] = "  {$stat}: {$home} {$hv} | {$away} {$av}";
+                    }
                 }
             }
         }
