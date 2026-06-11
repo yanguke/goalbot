@@ -6,6 +6,7 @@ use App\Models\Notification;
 use App\Models\Subscriber;
 use App\Services\AIMessageGenerator;
 use App\Services\Football\FootballDataService;
+use App\Services\Football\LiveScoreCommentaryService;
 use App\Services\MatchEventDetector;
 use App\Services\WhatsApp\MessageSender;
 use Carbon\Carbon;
@@ -98,6 +99,9 @@ class PollMatches extends Command
             if ($sent > 0) $this->info("  Sent kickoff to {$sent} subscribers");
         }
 
+        // Poll notable LiveScore commentary entries and send once per entry
+        $this->processCommentary($match, $whatsapp);
+
         // Detect events
         $events = $detector->detectEvents($match);
         
@@ -123,6 +127,63 @@ class PollMatches extends Command
         }
     }
     
+    private function processCommentary(array $match, MessageSender $whatsapp): void
+    {
+        $matchId  = $match['fixture']['id'];
+        $homeTeam = $match['teams']['home']['name'];
+        $awayTeam = $match['teams']['away']['name'];
+        $status   = $match['fixture']['status']['short'] ?? '';
+
+        // Only during live play
+        if (!in_array($status, ['1H', '2H', 'ET', 'HT'], true)) return;
+
+        $football = app(FootballDataService::class);
+        $lsSlug   = $football->getLiveScoreFullSlug($homeTeam, $awayTeam, $matchId);
+        if (!$lsSlug) return;
+
+        $commentary = app(LiveScoreCommentaryService::class);
+        $highlights = $commentary->getHighlights($lsSlug, 20);
+
+        if (empty($highlights)) return;
+
+        $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
+        if ($subscribers->isEmpty()) return;
+
+        $sent = 0;
+        foreach ($highlights as $entry) {
+            $hash      = 'commentary_' . md5($matchId . $entry['time'] . $entry['text']);
+            $eventType = "commentary_{$hash}";
+
+            // Check if already sent to anyone (use first subscriber as proxy — either all got it or none)
+            $alreadySent = Notification::where('match_id', $matchId)
+                ->where('event_type', $eventType)
+                ->exists();
+
+            if ($alreadySent) continue;
+
+            $minute  = $entry['time'];
+            $text    = $entry['text'];
+            $msg     = "⚽ *{$minute}* — {$text}";
+
+            foreach ($subscribers as $sub) {
+                Notification::create([
+                    'subscriber_id' => $sub->id,
+                    'match_id'      => $matchId,
+                    'event_type'    => $eventType,
+                    'message'       => $msg,
+                    'sent_at'       => now(),
+                    'status'        => 'sent',
+                ]);
+                $whatsapp->sendAlert($sub->phone_number, $msg);
+                usleep(100000);
+                $sent++;
+            }
+            $this->info("  Commentary sent: {$minute} — {$text}");
+        }
+
+        if ($sent > 0) $this->info("  Sent {$sent} commentary notifications");
+    }
+
     private function sendEventNotifications(
         array $event,
         int $matchId,
