@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'admin_key' => env('ADMIN_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
