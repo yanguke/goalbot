@@ -13,3 +13,6 @@ Schedule::command('matches:poll')->everyMinute();
 
 // Send reminders every 5 minutes (will only send when matches are ~2h away)
 Schedule::command('reminders:send')->everyFiveMinutes();
+
+// Refresh RAG fixtures cache (used by AI Q&A) every 5 minutes for fresh scores/status
+Schedule::command('fixtures:refresh')->everyFiveMinutes()->withoutOverlapping();
