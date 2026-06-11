@@ -181,27 +181,29 @@ class WhatsAppService
             // Kenyan user - show KES payment options
             $header = "⚽ GoalBot Subscription";
             $body = "You're about to subscribe to AI-powered World Cup 2026 alerts:\n\n" .
-                    "📱 *What you will receive:*\n" .
-                    "• Goals & match events\n" .
+                    "📱 *What you get:*\n" .
+                    "• Instant goal & event alerts\n" .
                     "• Red cards & penalties\n" .
-                    "• Match reminders\n" .
+                    "• AI match commentary\n" .
                     "• Half-time & full-time scores\n\n" .
-                    "💰 *Choose your plan:*";
-            $footer = "Tap a button to pay 👇";
+                    "💰 *Choose your plan:*\n" .
+                    "• KES 49 — full day access (today)\n" .
+                    "• KES 999 — full tournament (all 104 matches)";
+            $footer = "Tap a button to pay via M-Pesa 👇";
             
             $buttons = [
                 [
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_per_match',
-                        'title' => '49 - Match'
+                        'title' => 'KES 49 - Today'
                     ]
                 ],
                 [
                     'type' => 'reply',
                     'reply' => [
                         'id' => 'pay_full',
-                        'title' => '999 - Full'
+                        'title' => 'KES 999 - Full'
                     ]
                 ]
             ];
@@ -209,20 +211,29 @@ class WhatsAppService
             // International user - redirect to Stripe
             $header = "⚽ GoalBot Subscription";
             $body = "You're about to subscribe to AI-powered World Cup 2026 alerts:\n\n" .
-                    "📱 *What you will receive:*\n" .
-                    "• Goals & match events\n" .
+                    "📱 *What you get:*\n" .
+                    "• Instant goal & event alerts\n" .
                     "• Red cards & penalties\n" .
-                    "• Match reminders\n" .
+                    "• AI match commentary\n" .
                     "• Half-time & full-time scores\n\n" .
-                    "💰 *Cost:* $2.99 per match or $19.99 full tournament";
-            $footer = "Tap Continue to proceed 👇";
+                    "💰 *Plans:*\n" .
+                    "• \$0.99 — full day access\n" .
+                    "• \$9.99 — full tournament";
+            $footer = "Tap to choose 👇";
             
             $buttons = [
                 [
                     'type' => 'reply',
                     'reply' => [
-                        'id' => 'pay',
-                        'title' => '💳 Pay $2.99'
+                        'id' => 'pay_per_match',
+                        'title' => '$0.99 - Today'
+                    ]
+                ],
+                [
+                    'type' => 'reply',
+                    'reply' => [
+                        'id' => 'pay_full',
+                        'title' => '$9.99 - Full'
                     ]
                 ]
             ];
@@ -256,21 +267,27 @@ class WhatsAppService
         $isKenyan = str_starts_with($cleanNumber, '254');
         
         $header = "✅ Subscription Confirmed!";
-        $body = "You're now subscribed to GoalBot!\n\n" .
-                "📱 *Your alerts include:*\n" .
-                "• Goals & match events\n" .
-                "• Red cards & penalties\n" .
-                "• Match reminders\n" .
-                "• Half-time & full-time scores\n\n" .
-                "Complete payment to activate full access.";
-        $footer = "World Cup 2026 begins June 11, 2026 🏆";
+        $body = "Great choice! Complete payment to activate your alerts.\n\n" .
+                "📱 *You'll receive:*\n" .
+                "• Instant goal & event alerts\n" .
+                "• Red cards, penalties & VAR\n" .
+                "• AI match commentary\n" .
+                "• Half-time & full-time scores";
+        $footer = $isKenyan ? "KES 49/day or KES 999 full tournament" : "\$0.99/day or \$9.99 full tournament";
         
         $buttons = [
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'pay',
-                    'title' => $isKenyan ? '49 - Match' : 'Pay $0.99'
+                    'id' => 'pay_per_match',
+                    'title' => $isKenyan ? 'KES 49 - Today' : '$0.99 - Today'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'pay_full',
+                    'title' => $isKenyan ? 'KES 999 - Full' : '$9.99 - Full'
                 ]
             ]
         ];
@@ -294,31 +311,32 @@ class WhatsAppService
         $cleanNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
         
         if (str_starts_with($cleanNumber, '254')) {
-            // Kenyan pricing
             return $this->sendText(
                 $phoneNumber,
                 "💎 *GoalBot Pricing*\n\n" .
-                "*Pay Per Match*\n" .
-                "• KES 49 per match\n" .
-                "• Full AI commentary\n\n" .
-                "*Full Tournament* 🏆\n" .
-                "• KES 999 one-time\n" .
-                "• All 104 matches\n\n" .
-                "Reply */pay* for payment instructions."
+                "*Day Pass* — KES 49\n" .
+                "• Full access for today\n" .
+                "• All matches, all alerts\n" .
+                "• AI commentary & predictions\n\n" .
+                "*Full Tournament* — KES 999\n" .
+                "• All 104 World Cup matches\n" .
+                "• Never miss a goal all summer\n" .
+                "• Best value — saves KES 300+\n\n" .
+                "Reply *subscribe* to pay via M-Pesa."
             );
         }
-        
-        // International pricing
+
         return $this->sendText(
             $phoneNumber,
             "💎 *GoalBot Pricing*\n\n" .
-            "*Pay Per Match*\n" .
-            "• $0.99 per match\n" .
-            "• Full AI commentary\n\n" .
-            "*Full Tournament* 🏆\n" .
-            "• $9.99 one-time\n" .
-            "• All 104 matches\n\n" .
-            "Reply */pay* for payment instructions."
+            "*Day Pass* — \$0.99\n" .
+            "• Full access for today\n" .
+            "• All matches, all alerts\n" .
+            "• AI commentary & predictions\n\n" .
+            "*Full Tournament* — \$9.99\n" .
+            "• All 104 World Cup matches\n" .
+            "• Best value\n\n" .
+            "Reply *subscribe* to get started."
         );
     }
     
@@ -751,11 +769,11 @@ class WhatsAppService
         $isKenyan = str_starts_with($cleanNumber, '254');
 
         $msg = "🔒 *Premium Feature*\n\n";
-        $msg .= "AI Q&A and live match alerts are available to subscribers.\n\n";
+        $msg .= "Live alerts & AI Q&A require a GoalBot subscription.\n\n";
         $msg .= $isKenyan
-            ? "💳 Subscribe from *KES 49/match* or *KES 999* for the full tournament.\n\n"
-            : "💳 Subscribe from *\$0.99/match* or *\$9.99* for the full tournament.\n\n";
-        $msg .= "Reply *subscribe* to get started, or *demo* to try a free preview.";
+            ? "💳 *KES 49* for full day access, or *KES 999* for the entire tournament.\n\n"
+            : "💳 *\$0.99* for full day access, or *\$9.99* for the entire tournament.\n\n";
+        $msg .= "Reply *subscribe* to pay, or *demo* to try a free preview.";
 
         $this->sendText($subscriber->phone_number, $msg);
         return ['status' => 'paywall_sent'];

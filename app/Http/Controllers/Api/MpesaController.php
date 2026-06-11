@@ -139,33 +139,43 @@ class MpesaController extends Controller
     {
         $subscriber = Subscriber::where('phone_number', $transaction->phone_number)->first();
 
+        $isFull = $transaction->payment_type === 'full_tournament';
+
+        $subscriptionData = [
+            'is_active'             => true,
+            'notifications_enabled' => true,
+            'notify_all_matches'    => true,
+            'demo_mode'             => false,
+            'subscription_type'     => $isFull ? 'full_tournament' : 'per_match',
+            'paid_at'               => now(),
+            // Day pass expires at midnight EAT; full tournament never expires
+            'subscription_expires_at' => $isFull
+                ? null
+                : now()->setTimezone('Africa/Nairobi')->endOfDay()->utc(),
+        ];
+
         if (!$subscriber) {
-            $subscriber = Subscriber::create([
-                'phone_number' => $transaction->phone_number,
-                'is_active' => true,
-                'notifications_enabled' => true,
-                'notify_all_matches' => true,
-                'demo_mode' => false
-            ]);
+            $subscriber = Subscriber::create(
+                array_merge(['phone_number' => $transaction->phone_number], $subscriptionData)
+            );
         } else {
-            $subscriber->update([
-                'is_active' => true,
-                'notifications_enabled' => true,
-                'notify_all_matches' => true
-            ]);
+            $subscriber->update($subscriptionData);
         }
 
-        $paymentType = $transaction->payment_type === 'full_tournament' ? 'Full Tournament' : 'Per Match';
+        $planLabel = $isFull ? 'Full Tournament (all 104 matches)' : 'Day Pass (valid until midnight)';
+        $expiryNote = $isFull
+            ? 'You have access to all World Cup 2026 matches.'
+            : 'Your access is valid until midnight tonight. Renew anytime with *subscribe*.';
 
         $this->messageSender->sendText(
             $transaction->phone_number,
             "✅ *Payment Successful!*\n\n" .
             "Receipt: {$transaction->mpesa_receipt_number}\n" .
             "Amount: KES {$transaction->amount}\n" .
-            "Plan: {$paymentType}\n\n" .
-            "🎉 *You're now subscribed to GoalBot!*\n\n" .
-            "You'll receive AI-powered alerts for all World Cup 2026 matches.\n\n" .
-            "World Cup begins June 11, 2026 🏆"
+            "Plan: {$planLabel}\n\n" .
+            "🎉 *You're now on GoalBot!*\n\n" .
+            "{$expiryNote}\n\n" .
+            "Reply *menu* to see all commands. Enjoy the World Cup! 🏆"
         );
     }
 }
