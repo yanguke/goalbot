@@ -2,15 +2,23 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0a1628"/>
-      <stop offset="50%" stop-color="#1a3a5c"/>
+      <stop offset="55%" stop-color="#1a3a5c"/>
       <stop offset="100%" stop-color="#0d2137"/>
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#00d2ff"/>
       <stop offset="100%" stop-color="#3a7bd5"/>
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" result="b"/>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#25D366"/>
+      <stop offset="100%" stop-color="#1aaf4f"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="6" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
@@ -18,51 +26,70 @@
   <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- Decorative pitch lines -->
-  <g stroke="rgba(255,255,255,0.04)" stroke-width="2" fill="none">
-    <circle cx="1050" cy="500" r="180"/>
-    <circle cx="1050" cy="500" r="120"/>
-    <line x1="1050" y1="320" x2="1050" y2="680"/>
+  <!-- Subtle grid lines (football pitch feel) -->
+  <g stroke="rgba(255,255,255,0.035)" stroke-width="1.5" fill="none">
+    <circle cx="1060" cy="340" r="220"/>
+    <circle cx="1060" cy="340" r="140"/>
+    <circle cx="1060" cy="340" r="60"/>
+    <line x1="1060" y1="120" x2="1060" y2="560"/>
   </g>
 
-  <!-- Glow orb -->
-  <circle cx="980" cy="180" r="120" fill="#00d2ff" opacity="0.12" filter="url(#glow)"/>
+  <!-- Glow blob top right -->
+  <circle cx="1000" cy="140" r="140" fill="#00d2ff" opacity="0.10" filter="url(#glow)"/>
+  <!-- Glow blob bottom left -->
+  <circle cx="100" cy="560" r="100" fill="#3a7bd5" opacity="0.12" filter="url(#glow)"/>
 
-  <!-- Brand -->
-  <g transform="translate(80, 80)">
-    <text font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="600" fill="#00d2ff">⚽ GOALBOT</text>
+  <!-- Left accent bar -->
+  <rect x="80" y="72" width="6" height="56" rx="3" fill="url(#accent)"/>
+
+  <!-- Brand wordmark -->
+  <text x="100" y="114" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="4" fill="#00d2ff">GOALBOT</text>
+  <text x="100" y="140" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="400" fill="rgba(255,255,255,0.45)" letter-spacing="2">WORLD CUP 2026</text>
+
+  <!-- Main headline line 1 -->
+  <text x="80" y="255" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" fill="#ffffff" letter-spacing="-2">Never miss a</text>
+
+  <!-- Main headline line 2 — gradient -->
+  <text x="80" y="345" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" letter-spacing="-2" fill="url(#accent)">World Cup goal.</text>
+
+  <!-- Subheadline -->
+  <text x="82" y="408" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="400" fill="rgba(255,255,255,0.68)">Live alerts  •  AI commentary  •  Match predictions  •  on WhatsApp</text>
+
+  <!-- Divider line -->
+  <line x1="80" y1="438" x2="700" y2="438" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+
+  <!-- CTA pill (WhatsApp green) -->
+  <rect x="80" y="462" width="310" height="62" rx="31" fill="url(#green)"/>
+  <text x="235" y="501" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#ffffff">Start on WhatsApp</text>
+
+  <!-- Price badge -->
+  <rect x="410" y="462" width="230" height="62" rx="31" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+  <text x="525" y="501" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" fill="rgba(255,255,255,0.9)">From KES 49 / day</text>
+
+  <!-- Trophy SVG (right side) -->
+  <g transform="translate(860, 100)" opacity="0.92" filter="url(#softglow)">
+    <!-- Cup body -->
+    <path d="M90,20 L90,160 Q90,200 130,220 L130,260 L80,260 L80,290 L200,290 L200,260 L150,260 L150,220 Q190,200 190,160 L190,20 Z" fill="url(#accent)" opacity="0.9"/>
+    <!-- Handles -->
+    <path d="M90,50 Q40,50 40,100 Q40,150 90,150" fill="none" stroke="url(#accent)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M190,50 Q240,50 240,100 Q240,150 190,150" fill="none" stroke="url(#accent)" stroke-width="14" stroke-linecap="round"/>
+    <!-- Base plate -->
+    <rect x="60" y="290" width="160" height="18" rx="9" fill="#00d2ff" opacity="0.6"/>
+    <!-- Stars above -->
+    <g fill="#FFD700" opacity="0.95">
+      <polygon points="120,5 123,15 133,15 125,21 128,31 120,25 112,31 115,21 107,15 117,15" transform="translate(-10,0)"/>
+      <polygon points="120,5 123,15 133,15 125,21 128,31 120,25 112,31 115,21 107,15 117,15" transform="translate(30,0)"/>
+    </g>
   </g>
 
-  <!-- Headline -->
-  <g transform="translate(80, 200)">
-    <text font-family="Inter, -apple-system, sans-serif" font-size="68" font-weight="700" fill="#ffffff" letter-spacing="-2">
-      <tspan x="0" dy="0">Never miss a</tspan>
-      <tspan x="0" dy="82" fill="url(#accent)">World Cup goal.</tspan>
-    </text>
+  <!-- Football (soccer ball) top-right accent -->
+  <g transform="translate(1080, 480)" opacity="0.5">
+    <circle cx="0" cy="0" r="55" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+    <circle cx="0" cy="0" r="22" fill="rgba(255,255,255,0.12)"/>
+    <!-- Pentagon patches -->
+    <polygon points="0,-22 9,-7 -9,-7" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
   </g>
 
-  <!-- Subhead -->
-  <g transform="translate(80, 400)">
-    <text font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="rgba(255,255,255,0.75)">
-      <tspan x="0" dy="0">Live alerts • AI commentary • Match predictions</tspan>
-      <tspan x="0" dy="42">— all on WhatsApp.</tspan>
-    </text>
-  </g>
-
-  <!-- CTA pill -->
-  <g transform="translate(80, 520)">
-    <rect width="280" height="64" rx="32" fill="#25D366"/>
-    <text x="140" y="42" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#0a1628">💬 Start on WhatsApp</text>
-  </g>
-
-  <!-- Price tag -->
-  <g transform="translate(390, 520)">
-    <rect width="220" height="64" rx="32" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
-    <text x="110" y="42" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#ffffff">From KES 49/day</text>
-  </g>
-
-  <!-- Trophy icon -->
-  <g transform="translate(950, 250)" opacity="0.9">
-    <text font-size="220" text-anchor="middle">🏆</text>
-  </g>
+  <!-- goalbot.chat URL bottom -->
+  <text x="80" y="598" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="rgba(255,255,255,0.35)" letter-spacing="1">goalbot.chat</text>
 </svg>
