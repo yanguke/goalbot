@@ -96,6 +96,7 @@ class SendReminders extends Command
         $football    = app(FootballDataService::class);
         $fixtureId   = $match['fixture']['id'];
         $oddsMsg     = $this->buildOddsMessage($football, $fixtureId, $homeTeam, $awayTeam);
+        $briefing    = ($windowLabel === '1 hour') ? $ai->generatePreMatchBriefing($match) : null;
         
         foreach ($subscribers as $subscriber) {
             try {
@@ -121,6 +122,12 @@ class SendReminders extends Command
                 // Send odds + injuries snapshot for 1h/2h windows only
                 if ($oddsMsg && in_array($windowLabel, ['1 hour', '2 hours'])) {
                     $whatsapp->sendAlert($subscriber->phone_number, $oddsMsg);
+                    usleep(200000);
+                }
+
+                // Send rich pre-match briefing at 1-hour mark only
+                if ($briefing) {
+                    $whatsapp->sendAlert($subscriber->phone_number, $briefing);
                     usleep(200000);
                 }
 

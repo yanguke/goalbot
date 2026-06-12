@@ -334,29 +334,41 @@ class FootballDataService
             }
         }
 
-        return implode("\n", $lines);
-    }
-
-    /**
-     * Get World Cup group standings
-     */
-    public function getStandings(): array
-    {
-        return Cache::remember('wc_standings', 600, function () {
-            try {
-                $response = Http::withHeaders([
-                    'x-rapidapi-key' => $this->apiKey,
-                    'x-rapidapi-host' => 'v3.football.api-sports.io',
-                ])->get("{$this->baseUrl}/standings", [
-                    'league' => $this->getWorldCupLeagueId(),
-                    'season' => 2026,
-                ]);
-                return $response->successful() ? $response->json('response.0.league.standings', []) : [];
-            } catch (\Exception $e) {
-                Log::error('Standings error', ['error' => $e->getMessage()]);
-                return [];
+        // --- Group Standings ---
+        $standings = $this->getStandings();
+        if (!empty($standings)) {
+            $lines[] = "";
+            $lines[] = "GROUP STANDINGS:";
+            foreach ($standings as $group) {
+                $groupName = $group[0]['group'] ?? 'Group';
+                $lines[] = "  {$groupName}:";
+                foreach ($group as $entry) {
+                    $team  = $entry['team']['name'];
+                    $pts   = $entry['points'];
+                    $w     = $entry['all']['win'];
+                    $d     = $entry['all']['draw'];
+                    $l     = $entry['all']['lose'];
+                    $gd    = $entry['goalsDiff'];
+                    $rank  = $entry['rank'];
+                    $lines[] = "    {$rank}. {$team} — {$pts}pts ({$w}W {$d}D {$l}L, GD:{$gd})";
+                }
             }
-        });
+        }
+
+        // --- Top Scorers ---
+        $scorers = $this->getTopScorers();
+        if (!empty($scorers)) {
+            $lines[] = "";
+            $lines[] = "TOP SCORERS (Golden Boot):";
+            foreach (array_slice($scorers, 0, 10) as $s) {
+                $name  = $s['player']['name'] ?? '?';
+                $team  = $s['statistics'][0]['team']['name'] ?? '?';
+                $goals = $s['statistics'][0]['goals']['total'] ?? 0;
+                $lines[] = "  {$goals} goals — {$name} ({$team})";
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     /**
@@ -504,6 +516,95 @@ class FootballDataService
                 return $result;
             } catch (\Exception $e) {
                 Log::error('Odds error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get head-to-head record between two teams (last 10 meetings)
+     */
+    public function getHeadToHead(int $team1Id, int $team2Id): array
+    {
+        return Cache::remember("h2h_{$team1Id}_{$team2Id}", 86400, function () use ($team1Id, $team2Id) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/fixtures/headtohead", [
+                    'h2h'  => "{$team1Id}-{$team2Id}",
+                    'last' => 10,
+                ]);
+                return $response->successful() ? ($response->json('response') ?? []) : [];
+            } catch (\Exception $e) {
+                Log::error('H2H error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get last N results for a team
+     */
+    public function getTeamForm(int $teamId, int $last = 5): array
+    {
+        return Cache::remember("form_{$teamId}_{$last}", 3600, function () use ($teamId, $last) {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/fixtures", [
+                    'team'   => $teamId,
+                    'last'   => $last,
+                    'status' => 'FT-AET-PEN',
+                ]);
+                return $response->successful() ? ($response->json('response') ?? []) : [];
+            } catch (\Exception $e) {
+                Log::error('Team form error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get group standings for the World Cup
+     */
+    public function getStandings(): array
+    {
+        return Cache::remember('wc_standings', 1800, function () {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/standings", [
+                    'league' => $this->getWorldCupLeagueId(),
+                    'season' => 2026,
+                ]);
+                return $response->successful() ? ($response->json('response.0.league.standings') ?? []) : [];
+            } catch (\Exception $e) {
+                Log::error('Standings error', ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /**
+     * Get top scorers for the World Cup
+     */
+    public function getTopScorers(): array
+    {
+        return Cache::remember('wc_top_scorers', 3600, function () {
+            try {
+                $response = Http::withHeaders([
+                    'x-rapidapi-key'  => $this->apiKey,
+                    'x-rapidapi-host' => 'v3.football.api-sports.io',
+                ])->get("{$this->baseUrl}/players/topscorers", [
+                    'league' => $this->getWorldCupLeagueId(),
+                    'season' => 2026,
+                ]);
+                return $response->successful() ? ($response->json('response') ?? []) : [];
+            } catch (\Exception $e) {
+                Log::error('Top scorers error', ['error' => $e->getMessage()]);
                 return [];
             }
         });

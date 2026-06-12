@@ -210,6 +210,139 @@ PROMPT;
         return "🏆 World Cup update! Stay tuned for more action! ⚽";
     }
     
+    /**
+     * Generate a rich pre-match briefing for the 1-hour reminder window.
+     * Includes H2H, form, lineups (if available), key players, odds, injuries.
+     */
+    public function generatePreMatchBriefing(array $match, array $context = []): string
+    {
+        if (empty($this->apiKey)) return '';
+
+        $home    = $match['teams']['home']['name'];
+        $away    = $match['teams']['away']['name'];
+        $venue   = $match['fixture']['venue']['name'] ?? 'TBD';
+        $round   = $match['league']['round'] ?? 'World Cup 2026';
+        $homeId  = $match['teams']['home']['id'];
+        $awayId  = $match['teams']['away']['id'];
+        $fId     = $match['fixture']['id'];
+
+        $football = app(\App\Services\Football\FootballDataService::class);
+
+        // Gather all data
+        $h2h       = $football->getHeadToHead($homeId, $awayId);
+        $homeForm  = $football->getTeamForm($homeId, 5);
+        $awayForm  = $football->getTeamForm($awayId, 5);
+        $lineups   = $football->getLineups($fId);
+        $odds      = $football->getOdds($fId);
+        $injuries  = $football->getInjuries($fId);
+        $preds     = $football->getPredictions($fId);
+
+        // Build H2H summary
+        $h2hSummary = '';
+        if (!empty($h2h)) {
+            $homeWins = $awayWins = $draws = 0;
+            foreach (array_slice($h2h, 0, 10) as $game) {
+                $hg = $game['goals']['home'] ?? 0;
+                $ag = $game['goals']['away'] ?? 0;
+                $gh = $game['teams']['home']['id'];
+                if ($hg > $ag) { $gh === $homeId ? $homeWins++ : $awayWins++; }
+                elseif ($hg < $ag) { $gh === $homeId ? $awayWins++ : $homeWins++; }
+                else $draws++;
+            }
+            $h2hSummary = "Last " . count(array_slice($h2h, 0, 10)) . " meetings: {$home} {$homeWins}W | Draws {$draws} | {$away} {$awayWins}W";
+        }
+
+        // Form strings (W/D/L)
+        $formStr = function (array $results, int $teamId) {
+            return collect($results)->map(function ($g) use ($teamId) {
+                $hg = $g['goals']['home'] ?? 0;
+                $ag = $g['goals']['away'] ?? 0;
+                $isHome = $g['teams']['home']['id'] === $teamId;
+                $scored = $isHome ? $hg : $ag;
+                $conceded = $isHome ? $ag : $hg;
+                if ($scored > $conceded) return 'W';
+                if ($scored < $conceded) return 'L';
+                return 'D';
+            })->implode(' ');
+        };
+        $homeFormStr = $homeForm ? $formStr($homeForm, $homeId) : 'N/A';
+        $awayFormStr = $awayForm ? $formStr($awayForm, $awayId) : 'N/A';
+
+        // Lineups summary
+        $lineupStr = '';
+        if (!empty($lineups)) {
+            foreach ($lineups as $team) {
+                $tName = $team['team']['name'];
+                $formation = $team['formation'] ?? '?';
+                $starters = collect($team['startXI'] ?? [])->map(fn($p) => $p['player']['name'])->implode(', ');
+                $lineupStr .= "{$tName} [{$formation}]: {$starters}\n";
+            }
+        }
+
+        // Odds
+        $oddsStr = '';
+        $mw = $odds['bets']['Match Winner'] ?? [];
+        if ($mw) {
+            $oddsStr = "{$home} " . ($mw['Home'] ?? '?') . " | Draw " . ($mw['Draw'] ?? '?') . " | {$away} " . ($mw['Away'] ?? '?');
+        }
+
+        // Injuries
+        $injStr = '';
+        if (!empty($injuries)) {
+            $injStr = collect($injuries)->map(fn($i) => $i['team']['name'] . ': ' . $i['player']['name'] . ' (' . $i['player']['type'] . ')')->implode(', ');
+        }
+
+        // Prediction
+        $predStr = '';
+        if ($preds) {
+            $winner  = $preds['predictions']['winner']['name'] ?? null;
+            $advice  = $preds['predictions']['advice'] ?? null;
+            $pct     = $preds['predictions']['percent'] ?? [];
+            if ($winner) $predStr .= "Predicted winner: {$winner}. ";
+            if ($advice) $predStr .= $advice . ". ";
+            if ($pct) $predStr .= "Win%: {$home} {$pct['home']} / Draw {$pct['draw']} / {$away} {$pct['away']}";
+        }
+
+        $cacheKey = 'prematch_briefing_' . md5("{$home}_{$away}_{$fId}");
+        return Cache::remember($cacheKey, 3600, function () use (
+            $home, $away, $venue, $round, $h2hSummary, $homeFormStr, $awayFormStr,
+            $lineupStr, $oddsStr, $injStr, $predStr
+        ) {
+            try {
+                $dataBlock = implode("\n", array_filter([
+                    $h2hSummary ? "H2H: {$h2hSummary}" : null,
+                    "Form (last 5): {$home}: {$homeFormStr} | {$away}: {$awayFormStr}",
+                    $lineupStr ? "Lineups:\n{$lineupStr}" : null,
+                    $oddsStr ? "Odds: {$oddsStr}" : null,
+                    $injStr ? "Injuries/Suspensions: {$injStr}" : null,
+                    $predStr ? "AI Prediction: {$predStr}" : null,
+                ]));
+
+                $response = Http::timeout(20)->withHeaders([
+                    'x-api-key'         => $this->apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'Content-Type'      => 'application/json',
+                ])->post('https://api.anthropic.com/v1/messages', [
+                    'model'      => $this->model,
+                    'max_tokens' => 600,
+                    'system'     => 'You are GoalBot — a World Cup 2026 AI companion with the soul of Peter Drury. Write a pre-match briefing that is dramatic, insightful and gets the fan genuinely excited. Use real data provided. WhatsApp format — bold with *asterisks*, max 700 characters, 3-4 emojis. No markdown headers.',
+                    'messages'   => [[
+                        'role'    => 'user',
+                        'content' => "Write a pre-match briefing for: *{$home} vs {$away}*\nVenue: {$venue} | {$round}\n\nData:\n{$dataBlock}\n\nInclude: form, one H2H fact, key player to watch, your predicted score. End with hype.",
+                    ]],
+                    'temperature' => 0.85,
+                ]);
+
+                return $response->successful()
+                    ? "📋 *Pre-Match Briefing*\n\n" . trim($response->json('content.0.text', ''))
+                    : '';
+            } catch (\Exception $e) {
+                Log::warning('Pre-match briefing failed', ['error' => $e->getMessage()]);
+                return '';
+            }
+        });
+    }
+
     private function buildCacheKey(string $eventType, array $data, ?string $userTeam): string
     {
         // Create a unique but stable cache key
