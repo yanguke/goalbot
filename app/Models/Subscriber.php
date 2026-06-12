@@ -30,6 +30,7 @@ class Subscriber extends Model
         'subscription_type',
         'subscription_expires_at',
         'paid_at',
+        'commentary_mode',
     ];
 
     protected $casts = [

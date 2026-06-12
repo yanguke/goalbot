@@ -240,30 +240,65 @@ class PollMatches extends Command
             return;
         }
 
+        // Split subscribers by mode
+        $liveSubs   = $subscribers->filter(fn($s) => ($s->commentary_mode ?? 'live') === 'live');
+        $digestSubs = $subscribers->filter(fn($s) => ($s->commentary_mode ?? 'live') === 'digest');
+
         // Normal run — send only highlights not yet locked
         $highlights = $commentary->getHighlights($lsSlug, 20);
-        $sent = 0;
+        $newEntries = [];
+        $sent       = 0;
 
         foreach ($highlights as $entry) {
             $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
 
-            // Atomic: only proceed if we can set the lock (wasn't already sent)
             if (\Illuminate\Support\Facades\Cache::has($lockKey)) continue;
             \Illuminate\Support\Facades\Cache::put($lockKey, true, now()->addHours(6));
 
+            $newEntries[] = $entry;
             $minute = $entry['time'];
             $text   = $entry['text'];
             $msg    = "⚽ *{$minute}* — {$text}";
 
-            foreach ($subscribers as $sub) {
+            // Live mode: send each entry immediately
+            foreach ($liveSubs as $sub) {
                 $whatsapp->sendAlert($sub->phone_number, $msg);
                 usleep(100000);
                 $sent++;
             }
-            $this->info("  Commentary sent: {$minute} — {$text}");
+            if ($liveSubs->isNotEmpty()) {
+                $this->info("  Commentary sent: {$minute} — {$text}");
+            }
         }
 
-        if ($sent > 0) $this->info("  Sent {$sent} commentary notifications");
+        // Digest mode: collect entries into a 5-minute bucket, send once per window
+        if ($digestSubs->isNotEmpty() && !empty($newEntries)) {
+            $elapsed    = $match['fixture']['status']['elapsed'] ?? 0;
+            $window     = (int) floor($elapsed / 5) * 5; // e.g. 35 for minutes 35-39
+            $digestKey  = "digest_sent_{$matchId}_{$window}";
+
+            if (!\Illuminate\Support\Facades\Cache::has($digestKey)) {
+                \Illuminate\Support\Facades\Cache::put($digestKey, true, now()->addMinutes(6));
+
+                // Build digest message from new entries
+                $hGoals = $match['goals']['home'] ?? 0;
+                $aGoals = $match['goals']['away'] ?? 0;
+                $lines  = ["📋 *{$homeTeam} {$hGoals}–{$aGoals} {$awayTeam}* | {$elapsed}'", ""];
+                foreach ($newEntries as $e) {
+                    $lines[] = "• *{$e['time']}* {$e['text']}";
+                }
+                $digestMsg = implode("\n", $lines);
+
+                foreach ($digestSubs as $sub) {
+                    $whatsapp->sendAlert($sub->phone_number, $digestMsg);
+                    usleep(150000);
+                    $sent++;
+                }
+                $this->info("  Digest sent to {$digestSubs->count()} digest subscribers ({$window}' window, " . count($newEntries) . " entries)");
+            }
+        }
+
+        if ($sent > 0) $this->info("  Sent {$sent} total commentary notifications");
     }
 
     private function sendEventNotifications(
