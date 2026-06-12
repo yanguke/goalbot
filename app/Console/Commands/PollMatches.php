@@ -114,7 +114,8 @@ class PollMatches extends Command
                     'sent_at'       => now(),
                     'status'        => 'sent',
                 ]);
-                $whatsapp->sendAlert($sub->phone_number, $kickoffMsg);
+                $score = ($match['goals']['home'] ?? 0) . '-' . ($match['goals']['away'] ?? 0);
+                $whatsapp->sendKickoffAlert($sub->phone_number, $kickoffMsg, 'World Cup 2026', $homeTeam, $awayTeam, $score);
                 usleep(300000);
 
                 // Referral nudge — once per match per subscriber, right at kickoff

@@ -112,11 +112,43 @@ class MessageSender
     }
     
     /**
-     * Send match alert as a plain text message
+     * Send match alert — plain text within 24h window.
+     * If WHATSAPP_TEMPLATES_ENABLED=true and a fallback template is provided,
+     * a failed send will be retried via template to re-open the window.
      */
-    public function sendAlert(string $to, string $message): bool
+    public function sendAlert(string $to, string $message, ?string $fallbackTemplate = null, array $fallbackParams = []): bool
     {
-        return $this->sendText($to, $message);
+        $success = $this->sendText($to, $message);
+
+        // If free-form failed and templates are enabled, retry via template
+        if (!$success && $fallbackTemplate && config('services.whatsapp.templates_enabled', false)) {
+            Log::info('Retrying via template', ['to' => $to, 'template' => $fallbackTemplate]);
+            return $this->sendTemplate($to, $fallbackTemplate, $fallbackParams);
+        }
+
+        return $success;
+    }
+
+    /**
+     * Send kickoff alert — uses match_kickoff_alert template as fallback.
+     * Template variables: tournament, home, away, score
+     */
+    public function sendKickoffAlert(string $to, string $message, string $tournament, string $home, string $away, string $score): bool
+    {
+        return $this->sendAlert($to, $message, 'match_kickoff_alert', [
+            $tournament, $home, $away, $score,
+        ]);
+    }
+
+    /**
+     * Send reminder alert — uses match_reminder_alert template as fallback.
+     * Template variables: tournament, home, away, timeUntil, venue
+     */
+    public function sendReminderAlert(string $to, string $message, string $tournament, string $home, string $away, string $timeUntil, string $venue): bool
+    {
+        return $this->sendAlert($to, $message, 'match_reminder_alert', [
+            $tournament, $home, $away, $timeUntil, $venue,
+        ]);
     }
     
     /**

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('phone_number')->unique();
             $table->string('favorite_team')->nullable();
             $table->boolean('notifications_enabled')->default(true);
-            $table->boolean('notify_all_matches')->default(false);
+            $table->boolean('notify_all_matches')->default(true);
             $table->string('timezone')->default('UTC');
             $table->timestamp('last_notification_at')->nullable();
             $table->boolean('is_active')->default(true);

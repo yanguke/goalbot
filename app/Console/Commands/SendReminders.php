@@ -120,7 +120,15 @@ class SendReminders extends Command
                     : '';
                 $personalizedReminder = $urgencyPrefix . $base;
 
-                $whatsapp->sendAlert($subscriber->phone_number, $personalizedReminder);
+                $whatsapp->sendReminderAlert(
+                    $subscriber->phone_number,
+                    $personalizedReminder,
+                    'World Cup 2026',
+                    $homeTeam,
+                    $awayTeam,
+                    $windowLabel,
+                    $venue
+                );
                 usleep(200000);
 
                 // Send prediction after brief delay
