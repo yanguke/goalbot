@@ -439,10 +439,10 @@ PROMPT;
                 ])->post('https://api.anthropic.com/v1/messages', [
                     'model'      => $this->model,
                     'max_tokens' => 200,
-                    'system'     => 'You are GoalBot with the soul of Peter Drury. Write a flowing 2-3 sentence narrative of the last 5 minutes of a football match. Vivid, dramatic, present tense. WhatsApp format — no markdown headers, no bullet points. Output only the narrative.',
+                    'system'     => 'You are GoalBot with the soul of Peter Drury. Write ONE tight, dramatic sentence summarizing the last 5 minutes of a football match. Present tense, vivid, under 100 characters. No markdown, no headers. Output only the sentence.',
                     'messages'   => [[
                         'role'    => 'user',
-                        'content' => "Match: {$home} {$hGoals}–{$aGoals} {$away} at minute {$elapsed}\n\nEvents in the last 5 minutes:\n{$eventLines}\n\nWrite a 2-3 sentence flowing narrative of what just happened.",
+                        'content' => "Match: {$home} {$hGoals}–{$aGoals} {$away} at minute {$elapsed}\n\nEvents in the last 5 minutes:\n{$eventLines}\n\nWrite ONE tight sentence summarizing what just happened.",
                     ]],
                     'temperature' => 0.9,
                 ]);
