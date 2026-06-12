@@ -280,14 +280,22 @@ class PollMatches extends Command
             if (!\Illuminate\Support\Facades\Cache::has($digestKey)) {
                 \Illuminate\Support\Facades\Cache::put($digestKey, true, now()->addMinutes(6));
 
-                // Build digest message from new entries
                 $hGoals = $match['goals']['home'] ?? 0;
                 $aGoals = $match['goals']['away'] ?? 0;
-                $lines  = ["📋 *{$homeTeam} {$hGoals}–{$aGoals} {$awayTeam}* | {$elapsed}'", ""];
-                foreach ($newEntries as $e) {
-                    $lines[] = "• *{$e['time']}* {$e['text']}";
-                }
-                $digestMsg = implode("\n", $lines);
+
+                // Build raw events string for AI
+                $eventLines = collect($newEntries)
+                    ->map(fn($e) => "{$e['time']} — {$e['text']}")
+                    ->implode("\n");
+
+                // Ask Claude to narrate it as a match story
+                $ai      = app(AIMessageGenerator::class);
+                $narrative = $ai->generateDigestNarrative(
+                    $homeTeam, $awayTeam, $hGoals, $aGoals, $elapsed, $eventLines
+                );
+
+                $header    = "📋 *{$homeTeam} {$hGoals}–{$aGoals} {$awayTeam}* | {$elapsed}'\n\n";
+                $digestMsg = $header . $narrative;
 
                 foreach ($digestSubs as $sub) {
                     $whatsapp->sendAlert($sub->phone_number, $digestMsg);

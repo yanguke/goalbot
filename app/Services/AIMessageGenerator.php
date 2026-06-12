@@ -419,6 +419,42 @@ PROMPT;
         });
     }
 
+    /**
+     * Generate a short AI narrative of the last 5 minutes for digest subscribers.
+     */
+    public function generateDigestNarrative(
+        string $home, string $away, int $hGoals, int $aGoals, int $elapsed, string $eventLines
+    ): string {
+        if (empty($this->apiKey) || empty($eventLines)) {
+            return $eventLines;
+        }
+
+        $cacheKey = 'digest_narrative_' . md5("{$home}_{$away}_{$elapsed}_{$eventLines}");
+        return Cache::remember($cacheKey, 3600, function () use ($home, $away, $hGoals, $aGoals, $elapsed, $eventLines) {
+            try {
+                $response = Http::timeout(15)->withHeaders([
+                    'x-api-key'         => $this->apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'Content-Type'      => 'application/json',
+                ])->post('https://api.anthropic.com/v1/messages', [
+                    'model'      => $this->model,
+                    'max_tokens' => 200,
+                    'system'     => 'You are GoalBot with the soul of Peter Drury. Write a flowing 2-3 sentence narrative of the last 5 minutes of a football match. Vivid, dramatic, present tense. WhatsApp format — no markdown headers, no bullet points. Output only the narrative.',
+                    'messages'   => [[
+                        'role'    => 'user',
+                        'content' => "Match: {$home} {$hGoals}–{$aGoals} {$away} at minute {$elapsed}\n\nEvents in the last 5 minutes:\n{$eventLines}\n\nWrite a 2-3 sentence flowing narrative of what just happened.",
+                    ]],
+                    'temperature' => 0.9,
+                ]);
+                return $response->successful()
+                    ? trim($response->json('content.0.text', $eventLines))
+                    : $eventLines;
+            } catch (\Exception $e) {
+                return $eventLines;
+            }
+        });
+    }
+
     private function buildCacheKey(string $eventType, array $data, ?string $userTeam): string
     {
         // Create a unique but stable cache key
