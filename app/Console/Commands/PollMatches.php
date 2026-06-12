@@ -157,6 +157,48 @@ class PollMatches extends Command
         foreach ($events as $event) {
             $this->sendEventNotifications($event, $matchId, $subscribers, $ai, $whatsapp);
         }
+
+        // Post-match summary — send once after fulltime
+        $hasFulltime = collect($events)->contains(fn($e) => $e['type'] === 'fulltime');
+        if ($hasFulltime) {
+            $summaryKey = "postmatch_sent_{$matchId}";
+            if (!\Illuminate\Support\Facades\Cache::has($summaryKey)) {
+                \Illuminate\Support\Facades\Cache::put($summaryKey, true, now()->addHours(24));
+
+                $football  = app(FootballDataService::class);
+                $allEvents = $football->getMatchEvents($matchId);
+                $standings = $football->getStandings();
+                $summary   = $ai->generatePostMatchSummary($match, $allEvents, $standings);
+
+                $hGoals = $match['goals']['home'] ?? 0;
+                $aGoals = $match['goals']['away'] ?? 0;
+                $scoreMsg = "🏁 *FULL TIME*\n\n*{$homeTeam} {$hGoals} — {$aGoals} {$awayTeam}*\n\n";
+
+                // Goals list
+                $goalLines = collect($allEvents)
+                    ->filter(fn($e) => $e['type'] === 'Goal')
+                    ->map(function ($e) {
+                        $min    = $e['time']['elapsed'] ?? '?';
+                        $player = $e['player']['name'] ?? '?';
+                        $team   = $e['team']['name'] ?? '?';
+                        $detail = strtolower($e['detail'] ?? '');
+                        $tag    = str_contains($detail, 'own') ? ' ⚽(OG)' : (str_contains($detail, 'penalty') ? ' ⚽(pen)' : ' ⚽');
+                        return "  {$min}' {$player}{$tag} — {$team}";
+                    })->implode("\n");
+
+                if ($goalLines) $scoreMsg .= "Goals:\n{$goalLines}\n";
+
+                foreach ($subscribers as $sub) {
+                    $whatsapp->sendAlert($sub->phone_number, $scoreMsg);
+                    usleep(150000);
+                    if ($summary) {
+                        $whatsapp->sendAlert($sub->phone_number, $summary);
+                        usleep(150000);
+                    }
+                }
+                $this->info("  Sent post-match summary to {$subscribers->count()} subscribers");
+            }
+        }
     }
     
     private function processCommentary(array $match, MessageSender $whatsapp): void

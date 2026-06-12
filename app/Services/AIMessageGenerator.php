@@ -345,6 +345,80 @@ PROMPT;
         });
     }
 
+    /**
+     * Generate a post-match summary — score, report, group impact.
+     */
+    public function generatePostMatchSummary(array $match, array $events, array $standings = []): string
+    {
+        if (empty($this->apiKey)) return '';
+
+        $home    = $match['teams']['home']['name'];
+        $away    = $match['teams']['away']['name'];
+        $hGoals  = $match['goals']['home'] ?? 0;
+        $aGoals  = $match['goals']['away'] ?? 0;
+        $venue   = $match['fixture']['venue']['name'] ?? '';
+        $round   = $match['league']['round'] ?? 'World Cup 2026';
+
+        // Build goals list
+        $goalLines = collect($events)
+            ->filter(fn($e) => $e['type'] === 'Goal')
+            ->map(function ($e) {
+                $min    = $e['time']['elapsed'] ?? '?';
+                $player = $e['player']['name'] ?? '?';
+                $team   = $e['team']['name'] ?? '?';
+                $detail = strtolower($e['detail'] ?? '');
+                $tag    = str_contains($detail, 'own') ? ' (OG)' : (str_contains($detail, 'penalty') ? ' (pen)' : '');
+                return "  {$min}' {$player}{$tag} ({$team})";
+            })->implode("\n");
+
+        // Group standing snippet (just the relevant group)
+        $standingStr = '';
+        foreach ($standings as $group) {
+            $teams = collect($group)->pluck('team.name')->toArray();
+            if (in_array($home, $teams) || in_array($away, $teams)) {
+                $standingStr = collect($group)->map(fn($e) =>
+                    $e['rank'] . '. ' . $e['team']['name'] . ' — ' . $e['points'] . 'pts'
+                )->implode(' | ');
+                break;
+            }
+        }
+
+        $cacheKey = 'postmatch_' . md5("{$home}_{$away}_{$hGoals}_{$aGoals}");
+        return Cache::remember($cacheKey, 86400, function () use (
+            $home, $away, $hGoals, $aGoals, $venue, $round, $goalLines, $standingStr
+        ) {
+            try {
+                $result = $hGoals > $aGoals ? "{$home} win" : ($hGoals < $aGoals ? "{$away} win" : "Draw");
+                $dataBlock = "Result: {$home} {$hGoals}-{$aGoals} {$away} ({$result})\n"
+                    . "Venue: {$venue} | {$round}\n"
+                    . ($goalLines ? "Goals:\n{$goalLines}\n" : "No goals scored.\n")
+                    . ($standingStr ? "Group standings: {$standingStr}" : '');
+
+                $response = Http::timeout(20)->withHeaders([
+                    'x-api-key'         => $this->apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'Content-Type'      => 'application/json',
+                ])->post('https://api.anthropic.com/v1/messages', [
+                    'model'      => $this->model,
+                    'max_tokens' => 500,
+                    'system'     => 'You are GoalBot — a World Cup 2026 AI companion with the soul of Peter Drury. Write a post-match summary that is vivid, emotional and captures the drama. WhatsApp format — use *bold*, max 600 characters, 2-3 emojis. No markdown headers. End with one line on what this result means for the group.',
+                    'messages'   => [[
+                        'role'    => 'user',
+                        'content' => "Write a post-match summary:\n\n{$dataBlock}\n\nInclude: result verdict, standout moment, man of the match pick, group implications.",
+                    ]],
+                    'temperature' => 0.85,
+                ]);
+
+                return $response->successful()
+                    ? trim($response->json('content.0.text', ''))
+                    : '';
+            } catch (\Exception $e) {
+                Log::warning('Post-match summary failed', ['error' => $e->getMessage()]);
+                return '';
+            }
+        });
+    }
+
     private function buildCacheKey(string $eventType, array $data, ?string $userTeam): string
     {
         // Create a unique but stable cache key
