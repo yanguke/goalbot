@@ -33,30 +33,32 @@ class AIMessageGenerator
     /**
      * Generate a reminder message for upcoming match
      */
-    public function generateReminder(array $match): string
+    public function generateReminder(array $match, string $windowLabel = '1 hour'): string
     {
         $homeTeam = $match['teams']['home']['name'];
         $awayTeam = $match['teams']['away']['name'];
         $venue = $match['fixture']['venue']['name'] ?? 'TBD';
         $stage = $match['league']['round'] ?? 'Group stage';
-        
-        $prompt = <<<PROMPT
-You are GoalBot — a World Cup 2026 WhatsApp alert bot with the soul of Peter Drury. Write a pre-match reminder that is poetic, builds anticipation, and captures the drama of what is about to unfold. Never biased. Under 300 characters. Output only the message.
+
+        $cacheKey = 'reminder_msg_' . md5("{$homeTeam}_{$awayTeam}_{$windowLabel}");
+        return Cache::remember($cacheKey, 7200, function () use ($homeTeam, $awayTeam, $venue, $stage, $windowLabel) {
+            $prompt = <<<PROMPT
+You are GoalBot — a World Cup 2026 WhatsApp alert bot with the soul of Peter Drury. Write a pre-match reminder that is poetic, builds anticipation, and captures the drama of what is about to unfold. Never biased. Output only the message.
 
 Match: {$homeTeam} vs {$awayTeam}
-Kickoff: In 2 hours
+Kickoff: In {$windowLabel}
 Venue: {$venue}
 Stage: {$stage}
 
 Rules:
 - Keep under 250 characters
 - Use 1-2 relevant emojis (⚽ 🏆 🔥 ⏰)
-- Be energetic and conversational
-- Mention it's starting in 2 hours
+- Be energetic and match the urgency of the time window (e.g. "5 minutes" should feel electric, "2 hours" should build anticipation)
+- Mention exactly how long until kickoff: "{$windowLabel}"
 - Don't use the word "Match", use "game" or the team names
 PROMPT;
-
-        return $this->callClaude($prompt, 100);
+            return $this->callClaude($prompt, 100);
+        });
     }
     
     private function callAI(string $eventType, array $data, ?string $userTeam): string

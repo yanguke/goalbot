@@ -90,13 +90,23 @@ class SendReminders extends Command
         
         $this->info("  Sending to {$subscribers->count()} subscriber(s)");
 
-        // Generate reminder + prediction messages (shared across all subscribers)
-        $reminder    = $ai->generateReminder($match);
-        $prediction  = $this->generatePrediction($homeTeam, $awayTeam, $venue, $round);
-        $football    = app(FootballDataService::class);
-        $fixtureId   = $match['fixture']['id'];
-        $oddsMsg     = $this->buildOddsMessage($football, $fixtureId, $homeTeam, $awayTeam);
-        $briefing    = ($windowLabel === '1 hour') ? $ai->generatePreMatchBriefing($match) : null;
+        // Generate messages — each window sends different content, no cross-window duplication
+        $football  = app(FootballDataService::class);
+        $fixtureId = $match['fixture']['id'];
+
+        // Reminder tone is window-specific ("5 minutes" vs "2 hours")
+        $reminder = $ai->generateReminder($match, $windowLabel);
+
+        // Prediction + odds only at 2hr and 1hr (not every 5min countdown)
+        $prediction = in_array($windowLabel, ['2 hours', '1 hour'])
+            ? $this->generatePrediction($homeTeam, $awayTeam, $venue, $round)
+            : null;
+        $oddsMsg = in_array($windowLabel, ['2 hours', '1 hour'])
+            ? $this->buildOddsMessage($football, $fixtureId, $homeTeam, $awayTeam)
+            : null;
+
+        // Rich pre-match briefing only at 1hr (data-heavy, send once)
+        $briefing = ($windowLabel === '1 hour') ? $ai->generatePreMatchBriefing($match) : null;
         
         foreach ($subscribers as $subscriber) {
             try {
