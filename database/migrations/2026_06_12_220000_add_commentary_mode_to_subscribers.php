@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('subscribers', function (Blueprint $table) {
             // 'live' = every commentary entry as it happens (default)
             // 'digest' = one AI summary every 5 minutes
-            $table->string('commentary_mode')->default('live')->after('notify_all_matches');
+            $table->string('commentary_mode')->default('digest')->after('notify_all_matches');
         });
     }
 
