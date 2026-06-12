@@ -115,7 +115,17 @@ class PollMatches extends Command
                     'status'        => 'sent',
                 ]);
                 $whatsapp->sendAlert($sub->phone_number, $kickoffMsg);
-                usleep(100000);
+                usleep(300000);
+
+                // Referral nudge — once per match per subscriber, right at kickoff
+                $refKey = "referral_sent_{$matchId}_{$sub->id}";
+                if (!\Illuminate\Support\Facades\Cache::has($refKey)) {
+                    \Illuminate\Support\Facades\Cache::put($refKey, true, now()->addHours(12));
+                    $referralMsg = "⚽ Enjoying GoalBot live updates?\n\nInvite a friend to follow the World Cup with you!\n\n🌍 *https://goalbot.chat*\n\n_Live goals, commentary & AI insights — free to try._";
+                    $whatsapp->sendAlert($sub->phone_number, $referralMsg);
+                    usleep(200000);
+                }
+
                 $sent++;
             }
             if ($sent > 0) $this->info("  Sent kickoff to {$sent} subscribers");
@@ -257,7 +267,7 @@ class PollMatches extends Command
                 if ($success) {
                     $this->notificationCount++;
                 }
-                
+
                 // Rate limiting - small delay between sends
                 usleep(100000); // 0.1 second
                 
