@@ -18,15 +18,30 @@ class PopulateLiveScoreUrls extends Command
     {
         $this->info('Populating LiveScore commentary URLs for World Cup 2026...');
 
-        // Get all World Cup 2026 fixtures
-        $fixtures = $football->getWorldCupFixtures();
-        $this->info('Found ' . count($fixtures) . ' fixtures');
+        // Get all World Cup 2026 fixtures (check multiple dates)
+        $allFixtures = [];
+        $worldCupDates = [
+            '2026-06-11', '2026-06-12', '2026-06-13', '2026-06-14', '2026-06-15',
+            '2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20',
+            '2026-06-21', '2026-06-22', '2026-06-23', '2026-06-24', '2026-06-25',
+            '2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29', '2026-06-30',
+        ];
+        
+        foreach ($worldCupDates as $date) {
+            $fixtures = $football->getMatchesForDate($date);
+            if (!empty($fixtures)) {
+                $allFixtures = array_merge($allFixtures, $fixtures);
+                $this->info("Found " . count($fixtures) . " fixtures for {$date}");
+            }
+        }
+        
+        $this->info('Total fixtures found: ' . count($allFixtures));
 
         $created = 0;
         $updated = 0;
         $failed = 0;
 
-        foreach ($fixtures as $fixture) {
+        foreach ($allFixtures as $fixture) {
             $fixtureId = $fixture['fixture']['id'];
             $homeTeam = $fixture['teams']['home']['name'];
             $awayTeam = $fixture['teams']['away']['name'];
