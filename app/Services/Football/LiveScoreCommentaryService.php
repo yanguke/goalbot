@@ -153,6 +153,12 @@ class LiveScoreCommentaryService
     {
         $cacheKey = "livescore_slug_{$matchId}";
         return Cache::remember($cacheKey, 3600, function () use ($homeTeam, $awayTeam, $matchId) {
+            // First check if we have it in the database
+            $record = \App\Models\LiveScoreCommentaryUrl::where('fixture_id', $matchId)->first();
+            if ($record && $record->livescore_slug) {
+                Log::info('LiveScore slug found in database', ['fixture_id' => $matchId, 'slug' => $record->livescore_slug]);
+                return $record->livescore_slug;
+            }
             try {
                 // Fetch the World Cup 2026 fixtures page
                 $url = "https://www.livescore.com/en/football/international/world-cup-2026/fixtures/";
