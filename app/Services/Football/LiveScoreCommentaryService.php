@@ -144,4 +144,72 @@ class LiveScoreCommentaryService
         }
         return null;
     }
+
+    /**
+     * Discover the LiveScore match slug by fetching the competition page and finding the match.
+     * Returns slug like "qatar-vs-switzerland/1417916"
+     */
+    public function discoverSlug(string $homeTeam, string $awayTeam, int $matchId): ?string
+    {
+        $cacheKey = "livescore_slug_{$matchId}";
+        return Cache::remember($cacheKey, 3600, function () use ($homeTeam, $awayTeam, $matchId) {
+            try {
+                // Fetch the World Cup 2026 fixtures page
+                $url = "https://www.livescore.com/en/football/international/world-cup-2026/fixtures/";
+                $response = Http::withHeaders($this->headers)->timeout(10)->get($url);
+
+                if (!$response->successful()) {
+                    Log::warning('LiveScore fixtures page fetch failed', ['status' => $response->status()]);
+                    return null;
+                }
+
+                // Parse JSON from the page
+                preg_match('/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s', $response->body(), $matches);
+                if (empty($matches[1])) return null;
+
+                $json = json_decode($matches[1], true);
+                if (!$json) return null;
+
+                // Navigate to events array
+                $events = $json['props']['pageProps']['initialData']['sections'][0]['events'] ?? [];
+                if (empty($events)) return null;
+
+                // Find matching event by team names (case-insensitive)
+                foreach ($events as $event) {
+                    $eventHome = strtolower($event['homeTeamName'] ?? '');
+                    $eventAway = strtolower($event['awayTeamName'] ?? '');
+                    $searchHome = strtolower($homeTeam);
+                    $searchAway = strtolower($awayTeam);
+
+                    if (
+                        ($eventHome === $searchHome && $eventAway === $searchAway) ||
+                        ($eventHome === $searchAway && $eventAway === $searchHome)
+                    ) {
+                        $eventId = $event['id'] ?? '';
+                        if ($eventId) {
+                            // Build slug from team names and ID
+                            $slugHome = strtolower(str_replace(' ', '-', $event['homeTeamName'] ?? ''));
+                            $slugAway = strtolower(str_replace(' ', '-', $event['awayTeamName'] ?? ''));
+                            return "{$slugHome}-vs-{$slugAway}/{$eventId}";
+                        }
+                    }
+                }
+
+                Log::warning('LiveScore slug not found for match', [
+                    'home' => $homeTeam,
+                    'away' => $awayTeam,
+                    'matchId' => $matchId
+                ]);
+                return null;
+            } catch (\Exception $e) {
+                Log::error('LiveScore slug discovery error', [
+                    'error' => $e->getMessage(),
+                    'home' => $homeTeam,
+                    'away' => $awayTeam,
+                    'matchId' => $matchId
+                ]);
+                return null;
+            }
+        });
+    }
 }
