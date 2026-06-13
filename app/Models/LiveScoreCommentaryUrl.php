@@ -9,6 +9,8 @@ class LiveScoreCommentaryUrl extends Model
 {
     use HasFactory;
 
+    protected $table = 'livescore_commentary_urls';
+
     protected $fillable = [
         'fixture_id',
         'home_team',
