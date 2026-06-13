@@ -271,10 +271,10 @@ class PollMatches extends Command
             }
         }
 
-        // Digest mode: collect entries into a 5-minute bucket, send once per window
+        // Digest mode: collect entries into a 3-minute bucket, send once per window
         if ($digestSubs->isNotEmpty() && !empty($newEntries)) {
             $elapsed    = $match['fixture']['status']['elapsed'] ?? 0;
-            $window     = (int) floor($elapsed / 5) * 5; // e.g. 35 for minutes 35-39
+            $window     = (int) floor($elapsed / 3) * 3; // e.g. 36 for minutes 36-38
             $digestKey  = "digest_sent_{$matchId}_{$window}";
 
             if (!\Illuminate\Support\Facades\Cache::has($digestKey)) {
