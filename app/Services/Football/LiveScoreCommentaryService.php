@@ -195,10 +195,26 @@ class LiveScoreCommentaryService
                     }
                 }
 
-                Log::warning('LiveScore slug not found for match', [
+                // Fall back: construct slug from team names and try to verify it exists
+                Log::info('LiveScore slug not found on fixtures page, trying constructed slug', [
                     'home' => $homeTeam,
                     'away' => $awayTeam,
                     'matchId' => $matchId
+                ]);
+                
+                $fallbackSlug = strtolower(str_replace(' ', '-', $homeTeam)) . '-vs-' . strtolower(str_replace(' ', '-', $awayTeam)) . "/{$matchId}";
+                
+                // Verify the constructed slug actually exists by checking the page
+                if ($this->verifySlugExists($fallbackSlug)) {
+                    Log::info('Constructed slug verified successfully', ['slug' => $fallbackSlug]);
+                    return $fallbackSlug;
+                }
+                
+                Log::warning('Both discovery and fallback failed for match', [
+                    'home' => $homeTeam,
+                    'away' => $awayTeam,
+                    'matchId' => $matchId,
+                    'fallback' => $fallbackSlug
                 ]);
                 return null;
             } catch (\Exception $e) {
@@ -211,5 +227,19 @@ class LiveScoreCommentaryService
                 return null;
             }
         });
+    }
+
+    /**
+     * Verify that a constructed slug actually exists by checking the page loads successfully
+     */
+    private function verifySlugExists(string $slug): bool
+    {
+        try {
+            $url = "https://www.livescore.com/en/football/international/world-cup-2026/{$slug}/";
+            $response = Http::withHeaders($this->headers)->timeout(5)->get($url);
+            return $response->successful() && str_contains($response->body(), 'commentary');
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 }
