@@ -694,6 +694,18 @@ class WhatsAppService
                 $this->sendLiveStats($subscriber->phone_number);
                 return ['status' => 'stats_sent'];
                 
+            case 'upgrade_premium':
+                $this->sendPremiumInfo($subscriber->phone_number);
+                return ['status' => 'premium_info_sent'];
+                
+            case 'keep_free':
+                $this->sendText($subscriber->phone_number, "📊 Great! You'll continue getting all the essential World Cup updates for free.\n\nType *menu* anytime to explore more features!");
+                return ['status' => 'continue_free'];
+                
+            case 'learn_more':
+                $this->sendPremiumInfo($subscriber->phone_number);
+                return ['status' => 'premium_info_sent'];
+                
             case 'demo':
                 $this->sendText($subscriber->phone_number, "🎬 Demo mode removed! You now have full tournament access.\n\nType *menu* to see your options.");
                 return ['status' => 'demo_removed'];
@@ -852,6 +864,94 @@ class WhatsAppService
     }
     
     /**
+     * Send premium upgrade prompt (subtle introduction)
+     */
+    protected function sendPremiumUpgradePrompt(string $phone): bool
+    {
+        $header = "⭐ Unlock Premium Features";
+        $body = "You're getting the most out of GoalBot! Ready to enhance your World Cup experience with exclusive features?";
+        $footer = "Join fans who never miss a moment! 🏆";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'upgrade_premium',
+                    'title' => '🚀 Upgrade to Premium'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'keep_free',
+                    'title' => '📊 Continue Free'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'learn_more',
+                    'title' => '❓ Learn More'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
+    }
+    
+    /**
+     * Send premium information
+     */
+    protected function sendPremiumInfo(string $phone): bool
+    {
+        $header = "🚀 GoalBot Premium";
+        $body = "Unlock the complete World Cup experience with exclusive features:\n\n⭐ Advanced match analytics\n🎯 Custom player alerts\n📊 Detailed statistics\n🏆 Tournament insights\n\nPerfect for the ultimate football fan!";
+        $footer = "Choose your plan 👇";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'premium_monthly',
+                    'title' => '💎 Monthly Premium'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'premium_tournament',
+                    'title' => '🏆 Tournament Pass'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'menu',
+                    'title' => '🔙 Back to Menu'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
+    }
+    
+    /**
      * Handle text commands with new menu system
      */
     protected function handleTextCommand(Subscriber $subscriber, string $text): array
@@ -935,6 +1035,9 @@ class WhatsAppService
         if ($this->isTeamName($textLower)) {
             $subscriber->update(['favorite_team' => ucfirst($text)]);
             $this->sendText($subscriber->phone_number, "🌟 *Excellent Choice!*\n\n" . ucfirst($text) . " is now YOUR team! You'll get special alerts and insider updates for every match! 🏆\n\nYou're all set to support like a true fan! ⚽\n\nType *menu* to explore more features");
+            
+            // After setting favorite team, introduce premium upgrade (strategic timing)
+            $this->sendPremiumUpgradePrompt($subscriber->phone_number);
             return ['status' => 'favorite_set'];
         }
 
