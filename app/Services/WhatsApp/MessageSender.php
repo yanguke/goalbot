@@ -23,6 +23,14 @@ class MessageSender
      */
     public function sendText(string $to, string $message): bool
     {
+        return $this->sendMessage($to, $message);
+    }
+    
+    /**
+     * Send message - alias for sendText for consistency
+     */
+    public function sendMessage(string $to, string $message): bool
+    {
         try {
             $response = Http::withToken($this->accessToken)
                 ->post("{$this->apiUrl}/{$this->phoneNumberId}/messages", [
