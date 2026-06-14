@@ -92,9 +92,9 @@ class WhatsAppService
      */
     public function sendMainMenu(string $phoneNumber): bool
     {
-        $header = "⚽ Your World Cup Edge!";
-        $body = "Never miss a moment! Get instant goal alerts and key match updates that give you the football advantage.\n\nCustomize your experience:";
-        $footer = "Join smart fans who never miss out ⚡";
+        $header = "🤖 Your Personal AI Assistant";
+        $body = "I'm here to guide you through World Cup 2026! Let me keep you up to date and manage all the important information so you never miss a moment.\n\nWhat can I help you with?";
+        $footer = "I'm always here when you need me! ⚡";
         
         $buttons = [
             [
@@ -115,7 +115,7 @@ class WhatsAppService
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'schedule',
-                    'title' => '� Today\'s Matches'
+                    'title' => '📊 Today\'s Matches'
                 ]
             ]
         ];
@@ -613,18 +613,19 @@ class WhatsAppService
     public function sendSmoothWelcome(string $phoneNumber): bool
     {
         $welcome = "⚽ *Welcome to GoalBot!*\n\n";
-        $welcome .= "Never miss a World Cup moment again! 🏆\n\n";
-        $welcome .= "I'll be your personal football companion:\n";
+        $welcome .= "Hi! I'm your personal AI assistant, here to guide you through the entire World Cup 2026 journey. 🤖\n\n";
+        $welcome .= "I'll keep you up to date and manage all the important information so you never miss a moment:\n";
         $welcome .= "⚡ *Instant goal alerts* as they happen\n";
         $welcome .= "🎯 *Key match moments* you don't want to miss\n";
-        $welcome .= "📱 *Smart updates* only when it matters\n\n";
-        $welcome .= "Join thousands of fans already getting the edge!\n\n";
-        $welcome .= "*Quick setup - choose your experience:*\n";
+        $welcome .= "📱 *Smart updates* only when it matters\n";
+        $welcome .= "🏆 *Complete tournament coverage* from start to finish\n\n";
+        $welcome .= "Think of me as your personal football expert - always here when you need me!\n\n";
+        $welcome .= "*Let's get you set up - choose your experience:*\n";
         $welcome .= "1️⃣ My favorite team\n";
         $welcome .= "2️⃣ Alert preferences\n";
         $welcome .= "3️⃣ Today's matches\n";
         $welcome .= "4️⃣ More options\n\n";
-        $welcome .= "Get started! Just pick a number 👇";
+        $welcome .= "Ready to begin? Just pick a number 👇";
         
         return $this->sendText($phoneNumber, $welcome);
     }
