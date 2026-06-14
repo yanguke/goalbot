@@ -101,21 +101,21 @@ class WhatsAppService
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'favorite',
-                    'title' => '🌟 My Team'
+                    'title' => '⭐ My Team'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'commentary',
-                    'title' => '⚙️ Alerts'
+                    'title' => '🔔 Alert Settings'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'schedule',
-                    'title' => '📅 Today'
+                    'title' => '� Today\'s Matches'
                 ]
             ]
         ];
@@ -681,6 +681,18 @@ class WhatsAppService
                 $this->sendTodayResults($subscriber->phone_number);
                 return ['status' => 'schedule_sent'];
                 
+            case 'table':
+                $this->sendStandings($subscriber->phone_number);
+                return ['status' => 'table_sent'];
+                
+            case 'lineups':
+                $this->sendLineups($subscriber->phone_number);
+                return ['status' => 'lineups_sent'];
+                
+            case 'stats':
+                $this->sendLiveStats($subscriber->phone_number);
+                return ['status' => 'stats_sent'];
+                
             case 'demo':
                 $this->sendText($subscriber->phone_number, "🎬 Demo mode removed! You now have full tournament access.\n\nType *menu* to see your options.");
                 return ['status' => 'demo_removed'];
@@ -989,24 +1001,47 @@ class WhatsAppService
     }
 
     /**
-     * Send help commands
+     * Send help commands with buttons
      */
     protected function sendHelpCommands(string $phone): bool
     {
-        $message = "🤖 *GoalBot Commands*\n\n";
-        $message .= "*Quick Menu:*\n";
-        $message .= "1️⃣ *Favorite team* - Set your team\n";
-        $message .= "2️⃣ *Commentary style* - Digest or Live\n";
-        $message .= "3️⃣ *Schedule* - Today's matches\n";
-        $message .= "4️⃣ *Status* - Your settings\n\n";
-        $message .= "*Other Commands:*\n";
-        $message .= "• *menu* - Show main menu\n";
-        $message .= "• *stop* - Pause notifications\n";
-        $message .= "• *start* - Resume notifications\n";
-        $message .= "• Type any team name to set as favorite\n\n";
-        $message .= "Need help? Reply with your question!";
+        $header = "🤖 Everything You Can Do";
+        $body = "Explore all the football features at your fingertips!";
+        $footer = "Just tap a button - no typing needed!";
         
-        return $this->sendText($phone, $message);
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'table',
+                    'title' => '📊 Check Table'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'lineups',
+                    'title' => '👥 View Lineups'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'stats',
+                    'title' => '📈 Live Stats'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
     }
 
     /**
@@ -1104,7 +1139,48 @@ class WhatsAppService
             $msg .= "\n";
         }
         $msg .= "_Reply *results* for today's scores_";
-        return $this->sendText($phone, $msg);
+        
+        // Send standings first, then send buttons
+        $this->sendText($phone, $msg);
+        
+        // Now send follow-up buttons
+        $header = "🎯 Explore More?";
+        $body = "Dive deeper into World Cup action!";
+        $footer = "Just tap a button 👇";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'schedule',
+                    'title' => '📊 Today\'s Matches'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'lineups',
+                    'title' => '👥 View Lineups'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'menu',
+                    'title' => '🏠 Main Menu'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
     }
 
     protected function sendTodayResults(string $phone): bool
@@ -1143,7 +1219,48 @@ class WhatsAppService
             $msg .= "⚽ *{$home} {$hg} - {$ag} {$away}* ({$statusLabel})\n";
         }
         $msg .= "\n_Reply *table* for standings_";
-        return $this->sendText($phone, $msg);
+        
+        // Send results first, then send buttons
+        $this->sendText($phone, $msg);
+        
+        // Now send follow-up buttons
+        $header = "🎯 What's Next?";
+        $body = "Explore more football features!";
+        $footer = "Just tap a button 👇";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'table',
+                    'title' => '📊 Check Table'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'lineups',
+                    'title' => '👥 View Lineups'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'menu',
+                    'title' => '🏠 Main Menu'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
     }
 
     protected function sendUpcoming(string $phone): bool
