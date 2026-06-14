@@ -1038,36 +1038,22 @@ class WhatsAppService
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'lineups_' . $fixtureId,
-                    'title' => '👥 View Lineups'
+                    'id' => 'lineups',
+                    'title' => '👥 Lineups'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'stats_' . $fixtureId,
-                    'title' => '📊 Match Stats'
+                    'id' => 'stats',
+                    'title' => '📊 Stats'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'alerts_' . $fixtureId,
-                    'title' => '🔔 Set Alerts'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'commentary_' . $fixtureId,
-                    'title' => '💬 Live Commentary'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'menu',
-                    'title' => '🔙 Back to Menu'
+                    'id' => 'alerts',
+                    'title' => '🔔 Alerts'
                 ]
             ]
         ];
@@ -1581,29 +1567,35 @@ class WhatsAppService
             $status = $m['fixture']['status']['short'];
             $elapsed = $m['fixture']['status']['elapsed'];
             $statusLabel = match ($status) {
-                '1H', '2H' => "🔴 LIVE {$elapsed}'",
-                'HT' => '⏸ HT',
-                'FT' => '✅ FT',
-                'AET' => '✅ AET',
-                'PEN' => '✅ PEN',
+                '1H', '2H' => "LIVE {$elapsed}'",
+                'HT' => 'HT',
+                'FT' => 'FT',
+                'AET' => 'AET',
+                'PEN' => 'PEN',
                 default => $status,
             };
+            
+            // Shorten button titles to prevent API issues
+            $title = substr($home, 0, 8) . " {$hg}-{$ag} " . substr($away, 0, 8) . " ({$statusLabel})";
+            if (strlen($title) > 20) {
+                $title = substr($home, 0, 6) . " v " . substr($away, 0, 6);
+            }
             
             $buttons[] = [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'match_' . $m['fixture']['id'],
-                    'title' => "⚽ {$home} {$hg}-{$ag} {$away} ({$statusLabel})"
+                    'title' => $title
                 ]
             ];
         }
         
-        // Add navigation buttons
+        // Add navigation button
         $buttons[] = [
             'type' => 'reply',
             'reply' => [
                 'id' => 'table',
-                'title' => '📊 Check Table'
+                'title' => '📊 Table'
             ]
         ];
         
