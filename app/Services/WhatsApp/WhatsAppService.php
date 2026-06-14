@@ -731,6 +731,36 @@ class WhatsAppService
                 return ['status' => 'already_paid'];
                 
             default:
+                // Handle match-specific buttons (match_12345)
+                if (str_starts_with($buttonId, 'match_')) {
+                    $fixtureId = substr($buttonId, 6);
+                    $this->sendMatchDetails($subscriber->phone_number, $fixtureId);
+                    return ['status' => 'match_details_sent'];
+                }
+                
+                // Handle match detail buttons (lineups_12345, stats_12345, etc.)
+                if (str_contains($buttonId, '_')) {
+                    $parts = explode('_', $buttonId);
+                    if (count($parts) === 2) {
+                        $action = $parts[0];
+                        $fixtureId = $parts[1];
+                        
+                        switch ($action) {
+                            case 'lineups':
+                                $this->sendLineups($subscriber->phone_number);
+                                return ['status' => 'lineups_sent'];
+                            case 'stats':
+                                $this->sendLiveStats($subscriber->phone_number);
+                                return ['status' => 'stats_sent'];
+                            case 'alerts':
+                                $this->sendMatchAlertPrompt($subscriber->phone_number, $fixtureId);
+                                return ['status' => 'alert_prompt_sent'];
+                            case 'commentary':
+                                $this->sendMatchCommentary($subscriber->phone_number, $fixtureId);
+                                return ['status' => 'commentary_sent'];
+                        }
+                    }
+                }
                 return ['status' => 'unknown_button'];
         }
     }
@@ -949,6 +979,201 @@ class WhatsAppService
         );
         
         return $result['success'] ?? false;
+    }
+    
+    /**
+     * Send detailed match information with interactive options
+     */
+    protected function sendMatchDetails(string $phone, string $fixtureId): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        
+        // Get match details
+        $matches = $football->getTodayResults();
+        $match = null;
+        
+        foreach ($matches as $m) {
+            if ((string)$m['fixture']['id'] === $fixtureId) {
+                $match = $m;
+                break;
+            }
+        }
+        
+        if (!$match) {
+            // Try upcoming matches if not found in today's results
+            $upcoming = $football->getUpcomingMatches(5);
+            foreach ($upcoming as $m) {
+                if ((string)$m['fixture']['id'] === $fixtureId) {
+                    $match = $m;
+                    break;
+                }
+            }
+        }
+        
+        if (!$match) {
+            return $this->sendText($phone, "❌ Match details not found. Please try again.");
+        }
+        
+        $home = $match['teams']['home']['name'];
+        $away = $match['teams']['away']['name'];
+        $hg = $match['goals']['home'] ?? '-';
+        $ag = $match['goals']['away'] ?? '-';
+        $status = $match['fixture']['status']['short'] ?? 'NS';
+        $elapsed = $match['fixture']['status']['elapsed'] ?? 0;
+        
+        $statusLabel = match ($status) {
+            '1H', '2H' => "🔴 LIVE {$elapsed}'",
+            'HT' => '⏸ HT',
+            'FT' => '✅ FT',
+            'NS' => '⏰ Not Started',
+            default => $status,
+        };
+        
+        // Send match overview
+        $header = "⚽ Match Details";
+        $body = "*{$home} {$hg} - {$ag} {$away}*\nStatus: {$statusLabel}\n\nChoose what you'd like to explore:";
+        $footer = "Deep dive into this match! 🔍";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'lineups_' . $fixtureId,
+                    'title' => '👥 View Lineups'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'stats_' . $fixtureId,
+                    'title' => '📊 Match Stats'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'alerts_' . $fixtureId,
+                    'title' => '🔔 Set Alerts'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'commentary_' . $fixtureId,
+                    'title' => '💬 Live Commentary'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'menu',
+                    'title' => '🔙 Back to Menu'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
+    }
+    
+    /**
+     * Send match alert prompt
+     */
+    protected function sendMatchAlertPrompt(string $phone, string $fixtureId): bool
+    {
+        $header = "🔔 Match Alerts";
+        $body = "Get instant notifications for this specific match! Choose what you'd like to receive:";
+        $footer = "Never miss a moment! ⚡";
+        
+        $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'alerts_goals_' . $fixtureId,
+                    'title' => '⚽ Goals Only'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'alerts_all_' . $fixtureId,
+                    'title' => '🎯 All Key Moments'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'match_' . $fixtureId,
+                    'title' => '🔙 Back to Match'
+                ]
+            ]
+        ];
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $buttons
+        );
+        
+        return $result['success'] ?? false;
+    }
+    
+    /**
+     * Send match commentary
+     */
+    protected function sendMatchCommentary(string $phone, string $fixtureId): bool
+    {
+        $football = app(\App\Services\Football\FootballDataService::class);
+        
+        // Get match for commentary
+        $matches = $football->getTodayResults();
+        $match = null;
+        
+        foreach ($matches as $m) {
+            if ((string)$m['fixture']['id'] === $fixtureId) {
+                $match = $m;
+                break;
+            }
+        }
+        
+        if (!$match) {
+            return $this->sendText($phone, "❌ Commentary not available for this match.");
+        }
+        
+        $home = $match['teams']['home']['name'];
+        $away = $match['teams']['away']['name'];
+        
+        // Get LiveScore slug for commentary
+        $lsSlug = $football->getLiveScoreFullSlug($home, $away, $fixtureId);
+        
+        if (!$lsSlug) {
+            return $this->sendText($phone, "❌ Live commentary not available for this match yet.");
+        }
+        
+        $commentary = app(\App\Services\Football\LiveScoreCommentaryService::class);
+        $entries = $commentary->getCommentary($lsSlug);
+        
+        if (empty($entries)) {
+            return $this->sendText($phone, "💬 *Live Commentary*\n\n{$home} vs {$away}\n\nNo commentary available yet. Match may not have started or commentary is not enabled for this match.");
+        }
+        
+        $msg = "💬 *Live Commentary*\n\n{$home} vs {$away}\n\n";
+        foreach (array_slice($entries, 0, 5) as $entry) {
+            $msg .= "📝 {$entry['time']} - {$entry['text']}\n\n";
+        }
+        
+        $msg .= "_Reply *match_{$fixtureId}* for match options_";
+        
+        return $this->sendText($phone, $msg);
     }
     
     /**
@@ -1299,13 +1524,56 @@ class WhatsAppService
                 $kickoff = \Carbon\Carbon::parse($next['fixture']['date'])->setTimezone('Africa/Nairobi')->format('H:i');
                 $home = $next['teams']['home']['name'];
                 $away = $next['teams']['away']['name'];
-                return $this->sendText($phone, "📋 No matches played yet today.\n\n⏰ Next up: *{$home} vs {$away}* at {$kickoff} EAT\n\nReply *upcoming* for full schedule.");
+                
+                // Send next match as interactive button
+                $header = "📋 Next Match Today";
+                $body = "⏰ *{$home} vs {$away}* at {$kickoff} EAT\n\nGet ready for the action!";
+                $footer = "Tap to explore this match 👇";
+                
+                $buttons = [
+                    [
+                        'type' => 'reply',
+                        'reply' => [
+                            'id' => 'match_' . $next['fixture']['id'],
+                            'title' => "⚽ {$home} vs {$away}"
+                        ]
+                    ],
+                    [
+                        'type' => 'reply',
+                        'reply' => [
+                            'id' => 'upcoming',
+                            'title' => '📅 Full Schedule'
+                        ]
+                    ],
+                    [
+                        'type' => 'reply',
+                        'reply' => [
+                            'id' => 'menu',
+                            'title' => '🏠 Main Menu'
+                        ]
+                    ]
+                ];
+                
+                $result = $this->messageSender->sendInteractiveButtons(
+                    $phone, 
+                    $header, 
+                    $body, 
+                    $footer, 
+                    $buttons
+                );
+                
+                return $result['success'] ?? false;
             }
             return $this->sendText($phone, "📋 No matches today. Reply *upcoming* for the next fixtures.");
         }
 
-        $msg = "📊 *Today's Results*\n\n";
-        foreach ($matches as $m) {
+        // Create interactive match buttons
+        $header = "📊 Today's World Cup Matches";
+        $body = "Select a match to explore lineups, stats, and set alerts!";
+        $footer = "Tap any match for details 👇";
+        
+        $buttons = [];
+        foreach (array_slice($matches, 0, 3) as $m) {
             $home = $m['teams']['home']['name'];
             $away = $m['teams']['away']['name'];
             $hg = $m['goals']['home'] ?? '-';
@@ -1320,39 +1588,22 @@ class WhatsAppService
                 'PEN' => '✅ PEN',
                 default => $status,
             };
-            $msg .= "⚽ *{$home} {$hg} - {$ag} {$away}* ({$statusLabel})\n";
+            
+            $buttons[] = [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'match_' . $m['fixture']['id'],
+                    'title' => "⚽ {$home} {$hg}-{$ag} {$away} ({$statusLabel})"
+                ]
+            ];
         }
-        $msg .= "\n_Reply *table* for standings_";
         
-        // Send results first, then send buttons
-        $this->sendText($phone, $msg);
-        
-        // Now send follow-up buttons
-        $header = "🎯 What's Next?";
-        $body = "Explore more football features!";
-        $footer = "Just tap a button 👇";
-        
-        $buttons = [
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'table',
-                    'title' => '📊 Check Table'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'lineups',
-                    'title' => '👥 View Lineups'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'menu',
-                    'title' => '🏠 Main Menu'
-                ]
+        // Add navigation buttons
+        $buttons[] = [
+            'type' => 'reply',
+            'reply' => [
+                'id' => 'table',
+                'title' => '📊 Check Table'
             ]
         ];
         
