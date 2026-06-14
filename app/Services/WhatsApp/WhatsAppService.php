@@ -92,30 +92,30 @@ class WhatsAppService
      */
     public function sendMainMenu(string $phoneNumber): bool
     {
-        $header = "⚽ Welcome to GoalBot!";
-        $body = "Your World Cup 2026 companion is ready! I'll send you:\n\n📋 Match summaries every 3 minutes\n⚡ Live goals and key moments\n🏆 All tournament matches covered\n\nChoose your preferences:";
-        $footer = "Reply with a number or type *menu* anytime!";
+        $header = "⚽ Your World Cup Edge!";
+        $body = "Never miss a moment! Get instant goal alerts and key match updates that give you the football advantage.\n\nCustomize your experience:";
+        $footer = "Join smart fans who never miss out ⚡";
         
         $buttons = [
             [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'favorite',
-                    'title' => '1️⃣ My Favorite Team'
+                    'title' => '🌟 My Team'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'commentary',
-                    'title' => '2️⃣ Commentary Style'
+                    'title' => '⚙️ Alerts'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'schedule',
-                    'title' => '3️⃣ Match Schedule'
+                    'title' => '📅 Today'
                 ]
             ]
         ];
@@ -613,16 +613,18 @@ class WhatsAppService
     public function sendSmoothWelcome(string $phoneNumber): bool
     {
         $welcome = "⚽ *Welcome to GoalBot!*\n\n";
-        $welcome .= "Your World Cup 2026 companion is ready! I'll send you:\n";
-        $welcome .= "📋 *Match summaries* every 3 minutes\n";
-        $welcome .= "⚡ *Live goals* and key moments\n";
-        $welcome .= "🏆 *All tournament* matches covered\n\n";
-        $welcome .= "*Choose your preferences:*\n";
+        $welcome .= "Never miss a World Cup moment again! 🏆\n\n";
+        $welcome .= "I'll be your personal football companion:\n";
+        $welcome .= "⚡ *Instant goal alerts* as they happen\n";
+        $welcome .= "🎯 *Key match moments* you don't want to miss\n";
+        $welcome .= "📱 *Smart updates* only when it matters\n\n";
+        $welcome .= "Join thousands of fans already getting the edge!\n\n";
+        $welcome .= "*Quick setup - choose your experience:*\n";
         $welcome .= "1️⃣ My favorite team\n";
-        $welcome .= "2️⃣ Commentary style\n";
-        $welcome .= "3️⃣ Match schedule\n";
-        $welcome .= "4️⃣ Help & commands\n\n";
-        $welcome .= "Reply with a number or type *menu* anytime!";
+        $welcome .= "2️⃣ Alert preferences\n";
+        $welcome .= "3️⃣ Today's matches\n";
+        $welcome .= "4️⃣ More options\n\n";
+        $welcome .= "Get started! Just pick a number 👇";
         
         return $this->sendText($phoneNumber, $welcome);
     }
@@ -822,14 +824,15 @@ class WhatsAppService
         $current = $subscriber->commentary_mode ?? 'digest';
         $status = $subscriber->notifications_enabled ? 'ON' : 'OFF';
         
-        $message = "⚙️ *Commentary Preferences*\n\n";
-        $message .= "📊 *Current Status:* {$status}\n";
-        $message .= "📝 *Style:* " . ucfirst($current) . "\n\n";
-        $message .= "*Choose your style:*\n";
-        $message .= "📋 *Digest* - 3-minute summaries (recommended)\n";
-        $message .= "⚡ *Live* - Every update instantly\n\n";
-        $message .= "Reply: *digest* or *live*\n";
-        $message .= "Or: *notifications on/off*\n";
+        $message = "⚙️ *Your Alert Preferences*\n\n";
+        $message .= "� *Status:* {$status}\n";
+        $message .= "� *Style:* " . ucfirst($current) . "\n\n";
+        $message .= "*Choose your experience:*\n";
+        $message .= "🎯 *Smart alerts* - Big moments only (recommended)\n";
+        $message .= "⚡ *Live updates* - Every key play instantly\n\n";
+        $message .= "Perfect for staying ahead! 🏆\n\n";
+        $message .= "Reply: *smart* or *live*\n";
+        $message .= "Or: *pause* / *resume*\n";
         $message .= "Type *menu* to go back";
         
         return $this->sendText($phone, $message);
@@ -871,28 +874,28 @@ class WhatsAppService
         }
 
         // Handle commentary style changes
-        if ($textLower === 'digest') {
+        if ($textLower === 'digest' || $textLower === 'smart') {
             $subscriber->update(['commentary_mode' => 'digest']);
-            $this->sendText($subscriber->phone_number, "📋 *Commentary Style Updated!*\n\nYou'll now receive 3-minute summaries.\n\nType *menu* for more options");
-            return ['status' => 'digest_set'];
+            $this->sendText($subscriber->phone_number, "🎯 *Smart Alerts Activated!*\n\nPerfect choice! You'll get the big moments without the noise. Stay focused on what matters most! 🏆\n\nType *menu* for more options");
+            return ['status' => 'smart_set'];
         }
 
         if ($textLower === 'live') {
             $subscriber->update(['commentary_mode' => 'live']);
-            $this->sendText($subscriber->phone_number, "⚡ *Commentary Style Updated!*\n\nYou'll now receive every update instantly.\n\nType *menu* for more options");
+            $this->sendText($subscriber->phone_number, "⚡ *Live Updates Ready!*\n\nYou're all set for instant action! Never miss a goal or key moment again! ⚽\n\nType *menu* for more options");
             return ['status' => 'live_set'];
         }
 
         // Handle notifications on/off
-        if ($textLower === 'notifications on' || $textLower === 'on') {
+        if ($textLower === 'notifications on' || $textLower === 'on' || $textLower === 'resume') {
             $subscriber->update(['notifications_enabled' => true]);
-            $this->sendText($subscriber->phone_number, "🔔 *Notifications Enabled*\n\nYou'll receive match updates again!");
+            $this->sendText($subscriber->phone_number, "🔔 *Welcome Back!*\n\nGreat to have you back! You're all set to catch every exciting moment! ⚽\n\nType *menu* to customize your experience");
             return ['status' => 'notifications_on'];
         }
 
-        if ($textLower === 'notifications off' || $textLower === 'off') {
+        if ($textLower === 'notifications off' || $textLower === 'off' || $textLower === 'pause') {
             $subscriber->update(['notifications_enabled' => false]);
-            $this->sendText($subscriber->phone_number, "🔕 *Notifications Disabled*\n\nType *start* to resume anytime.");
+            $this->sendText($subscriber->phone_number, "⏸️ *Taking a break?*\n\nNo problem! We'll be here when you're ready for more football action. Just type *resume* anytime! 🏆\n\nMiss you already!");
             return ['status' => 'notifications_off'];
         }
 
@@ -918,7 +921,7 @@ class WhatsAppService
         // Check if it's a team name for favorite setting
         if ($this->isTeamName($textLower)) {
             $subscriber->update(['favorite_team' => ucfirst($text)]);
-            $this->sendText($subscriber->phone_number, "🌟 *Favorite Team Set!*\n\nYou'll get extra updates for *" . ucfirst($text) . "*!\n\nType *menu* for more options");
+            $this->sendText($subscriber->phone_number, "🌟 *Excellent Choice!*\n\n" . ucfirst($text) . " is now YOUR team! You'll get special alerts and insider updates for every match! 🏆\n\nYou're all set to support like a true fan! ⚽\n\nType *menu* to explore more features");
             return ['status' => 'favorite_set'];
         }
 
