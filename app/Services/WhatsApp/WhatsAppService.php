@@ -797,12 +797,7 @@ class WhatsAppService
         return $this->sendText($phone, trim($msg));
     }
 
-    protected function sendSubstitutions(string $phone): bool
-    {
-        // Implementation for substitutions
-        return $this->sendText($phone, "🔄 Substitution data will be available during live matches!");
-    }
-    
+        
     /**
      * Send favorite team prompt
      */
