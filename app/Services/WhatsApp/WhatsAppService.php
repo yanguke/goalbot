@@ -1157,9 +1157,105 @@ class WhatsAppService
             $msg .= "📝 {$entry['time']} - {$entry['text']}\n\n";
         }
         
-        $msg .= "_Reply *match_{$fixtureId}* for match options_";
+        $msg .= "_Choose your next action below 👇_";
         
-        return $this->sendText($phone, $msg);
+        // Send commentary first, then send action buttons
+        $this->sendText($phone, $msg);
+        
+        // Generate randomized action buttons
+        $actionButtons = $this->generateRandomizedActionButtons($fixtureId);
+        
+        $header = "⚡ Quick Actions";
+        $body = "Explore more about this match!";
+        $footer = "Tap any option to dive deeper 🔍";
+        
+        $result = $this->messageSender->sendInteractiveButtons(
+            $phone, 
+            $header, 
+            $body, 
+            $footer, 
+            $actionButtons
+        );
+        
+        return $result['success'] ?? false;
+    }
+    
+    /**
+     * Generate randomized action buttons for commentary
+     */
+    protected function generateRandomizedActionButtons(string $fixtureId): array
+    {
+        // Randomized keywords for each action to keep it fresh
+        $lineupsKeywords = ['👥 Lineups', '🚀 Starting XI', '⭐ Team Setup', '🎯 Formation'];
+        $statsKeywords = ['📊 Stats', '📈 Numbers', '🔢 Data', '💯 Analysis'];
+        $alertsKeywords = ['🔔 Alerts', '⚡ Notify', '📱 Updates', '🎯 Track'];
+        
+        // Select random keywords
+        $lineupsKeyword = $lineupsKeywords[array_rand($lineupsKeywords)];
+        $statsKeyword = $statsKeywords[array_rand($statsKeywords)];
+        $alertsKeyword = $alertsKeywords[array_rand($alertsKeywords)];
+        
+        return [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'lineups',
+                    'title' => $lineupsKeyword
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'stats',
+                    'title' => $statsKeyword
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'alerts',
+                    'title' => $alertsKeyword
+                ]
+            ]
+        ];
+    }
+    
+    /**
+     * Generate randomized follow-up buttons
+     */
+    protected function generateFollowUpButtons(): array
+    {
+        $tableKeywords = ['📊 Table', '🏆 Rankings', '📈 Standings', '🎯 League'];
+        $lineupsKeywords = ['👥 Lineups', '🚀 Teams', '⭐ Squads', '🎯 Players'];
+        $menuKeywords = ['🏠 Menu', '🎯 Home', '⭐ Main', '🚀 Start'];
+        
+        $tableKeyword = $tableKeywords[array_rand($tableKeywords)];
+        $lineupsKeyword = $lineupsKeywords[array_rand($lineupsKeywords)];
+        $menuKeyword = $menuKeywords[array_rand($menuKeywords)];
+        
+        return [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'table',
+                    'title' => $tableKeyword
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'lineups',
+                    'title' => $lineupsKeyword
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'menu',
+                    'title' => $menuKeyword
+                ]
+            ]
+        ];
     }
     
     /**
