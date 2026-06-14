@@ -70,17 +70,18 @@ class WhatsAppService
         if (!$subscriber) {
             $subscriber = Subscriber::create([
                 'phone_number' => $phoneNumber,
-                'is_active' => false,
+                'is_active' => true,
                 'notifications_enabled' => true,
-                'notify_all_matches' => false,
+                'notify_all_matches' => true,
                 'demo_mode' => false,
-                'subscription_type' => 'free',
+                'subscription_type' => 'full_tournament',
+                'commentary_mode' => 'digest',
             ]);
 
-            Log::info('New subscriber created (free)', ['phone' => $phoneNumber]);
+            Log::info('New subscriber created (full tournament)', ['phone' => $phoneNumber]);
 
-            // Greet and prompt subscription
-            $this->sendWelcome($phoneNumber);
+            // Send smooth welcome message
+            $this->sendSmoothWelcome($phoneNumber);
         }
         
         return $subscriber;
@@ -92,29 +93,29 @@ class WhatsAppService
     public function sendMainMenu(string $phoneNumber): bool
     {
         $header = "⚽ Welcome to GoalBot!";
-        $body = "AI-powered World Cup 2026 match alerts delivered to your WhatsApp.\n\nWhat would you like to do?";
-        $footer = "Choose an option below 👇";
+        $body = "Your World Cup 2026 companion is ready! I'll send you:\n\n📋 Match summaries every 3 minutes\n⚡ Live goals and key moments\n🏆 All tournament matches covered\n\nChoose your preferences:";
+        $footer = "Reply with a number or type *menu* anytime!";
         
         $buttons = [
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'demo',
-                    'title' => '🎬 Demo'
+                    'id' => 'favorite',
+                    'title' => '1️⃣ My Favorite Team'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'subscribe',
-                    'title' => '✅ Subscribe'
+                    'id' => 'commentary',
+                    'title' => '2️⃣ Commentary Style'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'pricing',
-                    'title' => '💎 Pricing'
+                    'id' => 'schedule',
+                    'title' => '3️⃣ Match Schedule'
                 ]
             ]
         ];
@@ -607,19 +608,31 @@ class WhatsAppService
     }
     
     /**
-     * Send welcome message
+     * Send smooth welcome message
+     */
+    public function sendSmoothWelcome(string $phoneNumber): bool
+    {
+        $welcome = "⚽ *Welcome to GoalBot!*\n\n";
+        $welcome .= "Your World Cup 2026 companion is ready! I'll send you:\n";
+        $welcome .= "📋 *Match summaries* every 3 minutes\n";
+        $welcome .= "⚡ *Live goals* and key moments\n";
+        $welcome .= "🏆 *All tournament* matches covered\n\n";
+        $welcome .= "*Choose your preferences:*\n";
+        $welcome .= "1️⃣ My favorite team\n";
+        $welcome .= "2️⃣ Commentary style\n";
+        $welcome .= "3️⃣ Match schedule\n";
+        $welcome .= "4️⃣ Help & commands\n\n";
+        $welcome .= "Reply with a number or type *menu* anytime!";
+        
+        return $this->sendText($phoneNumber, $welcome);
+    }
+    
+    /**
+     * Send welcome message (legacy)
      */
     public function sendWelcome(string $phoneNumber): bool
     {
-        return $this->sendText(
-            $phoneNumber,
-            "⚽ *GoalBot - World Cup 2026 Alerts*\n\n" .
-            "Send *GoalBot* to see options\n" .
-            "Send *Demo* to try a simulation\n" .
-            "Send *Subscribe* to opt in\n" .
-            "Send *Pricing* for rates\n\n" .
-            "https://goalbot.devs.mobi"
-        );
+        return $this->sendSmoothWelcome($phoneNumber);
     }
     
     /**
@@ -654,29 +667,41 @@ class WhatsAppService
     protected function handleButtonClick(Subscriber $subscriber, string $buttonId): array
     {
         switch ($buttonId) {
+            case 'favorite':
+                $this->sendFavoriteTeamPrompt($subscriber->phone_number);
+                return ['status' => 'favorite_prompt_sent'];
+                
+            case 'commentary':
+                $this->sendCommentaryStylePrompt($subscriber->phone_number, $subscriber);
+                return ['status' => 'commentary_prompt_sent'];
+                
+            case 'schedule':
+                $this->sendTodayResults($subscriber->phone_number);
+                return ['status' => 'schedule_sent'];
+                
             case 'demo':
-                $this->startDemo($subscriber);
-                return ['status' => 'demo_started'];
+                $this->sendText($subscriber->phone_number, "🎬 Demo mode removed! You now have full tournament access.\n\nType *menu* to see your options.");
+                return ['status' => 'demo_removed'];
                 
             case 'subscribe':
-                $this->subscribeUser($subscriber);
-                return ['status' => 'subscribe_preview_sent'];
+                $this->sendText($subscriber->phone_number, "✅ You're already subscribed with full tournament access!\n\nType *menu* to customize your experience.");
+                return ['status' => 'already_subscribed'];
                 
             case 'pay_per_match':
-                $this->initiateStkPush($subscriber->phone_number, 49, 'per_match');
-                return ['status' => 'stk_initiated'];
+                $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
+                return ['status' => 'already_paid'];
                 
             case 'pay_full':
-                $this->initiateStkPush($subscriber->phone_number, 1999, 'full_tournament');
-                return ['status' => 'stk_initiated'];
+                $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
+                return ['status' => 'already_paid'];
                 
             case 'pricing':
-                $this->sendPricing($subscriber->phone_number);
-                return ['status' => 'pricing_sent'];
+                $this->sendText($subscriber->phone_number, "🎉 Good news! You have full tournament access at no cost.\n\nType *menu* to customize your experience.");
+                return ['status' => 'free_access'];
                 
             case 'pay':
-                $this->processPayment($subscriber->phone_number);
-                return ['status' => 'payment_initiated'];
+                $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
+                return ['status' => 'already_paid'];
                 
             default:
                 return ['status' => 'unknown_button'];
@@ -866,6 +891,259 @@ class WhatsAppService
         return $this->sendText($phone, trim($msg));
     }
 
+    protected function sendSubstitutions(string $phone): bool
+    {
+        // Implementation for substitutions
+        return $this->sendText($phone, "🔄 Substitution data will be available during live matches!");
+    }
+    
+    /**
+     * Send favorite team prompt
+     */
+    protected function sendFavoriteTeamPrompt(string $phone): bool
+    {
+        $message = "🌟 *Choose Your Favorite Team*\n\n";
+        $message .= "Type your team name (e.g., Brazil, England, France)\n\n";
+        $message .= "Popular teams:\n";
+        $message .= "🇧🇷 Brazil • 🇦🇷 Argentina • 🇫🇷 France\n";
+        $message .= "🇪🇸 Spain • 🇩🇪 Germany • 🏴󠁧󠁢󠁥󠁮󠁧󠁿 England\n";
+        $message .= "🇵🇹 Portugal • 🇳🇱 Netherlands • 🇧🇪 Belgium\n\n";
+        $message .= "Reply with your team name or *menu* to go back";
+        
+        return $this->sendText($phone, $message);
+    }
+    
+    /**
+     * Send commentary style prompt
+     */
+    protected function sendCommentaryStylePrompt(string $phone, Subscriber $subscriber): bool
+    {
+        $current = $subscriber->commentary_mode ?? 'digest';
+        $status = $subscriber->notifications_enabled ? 'ON' : 'OFF';
+        
+        $message = "⚙️ *Commentary Preferences*\n\n";
+        $message .= "📊 *Current Status:* {$status}\n";
+        $message .= "📝 *Style:* " . ucfirst($current) . "\n\n";
+        $message .= "*Choose your style:*\n";
+        $message .= "📋 *Digest* - 3-minute summaries (recommended)\n";
+        $message .= "⚡ *Live* - Every update instantly\n\n";
+        $message .= "Reply: *digest* or *live*\n";
+        $message .= "Or: *notifications on/off*\n";
+        $message .= "Type *menu* to go back";
+        
+        return $this->sendText($phone, $message);
+    }
+    
+    /**
+     * Handle text commands with new menu system
+     */
+    protected function handleTextCommand(Subscriber $subscriber, string $text): array
+    {
+        // Main keyword triggers menu
+        if (str_contains($text, 'goalbot') || str_contains($text, 'goal')) {
+            $this->sendMainMenu($subscriber->phone_number);
+            return ['status' => 'menu_sent'];
+        }
+        
+        // Direct commands
+        $textLower = strtolower(trim($text));
+
+        // Handle numbered menu options
+        if ($textLower === '1' || $textLower === 'favorite' || $textLower === 'team') {
+            $this->sendFavoriteTeamPrompt($subscriber->phone_number);
+            return ['status' => 'favorite_prompt_sent'];
+        }
+
+        if ($textLower === '2' || $textLower === 'commentary' || $textLower === 'style') {
+            $this->sendCommentaryStylePrompt($subscriber->phone_number, $subscriber);
+            return ['status' => 'commentary_prompt_sent'];
+        }
+
+        if ($textLower === '3' || $textLower === 'schedule' || $textLower === 'matches') {
+            $this->sendTodayResults($subscriber->phone_number);
+            return ['status' => 'schedule_sent'];
+        }
+
+        if ($textLower === '4' || $textLower === 'help' || $textLower === 'commands') {
+            $this->sendHelpCommands($subscriber->phone_number);
+            return ['status' => 'help_sent'];
+        }
+
+        // Handle commentary style changes
+        if ($textLower === 'digest') {
+            $subscriber->update(['commentary_mode' => 'digest']);
+            $this->sendText($subscriber->phone_number, "📋 *Commentary Style Updated!*\n\nYou'll now receive 3-minute summaries.\n\nType *menu* for more options");
+            return ['status' => 'digest_set'];
+        }
+
+        if ($textLower === 'live') {
+            $subscriber->update(['commentary_mode' => 'live']);
+            $this->sendText($subscriber->phone_number, "⚡ *Commentary Style Updated!*\n\nYou'll now receive every update instantly.\n\nType *menu* for more options");
+            return ['status' => 'live_set'];
+        }
+
+        // Handle notifications on/off
+        if ($textLower === 'notifications on' || $textLower === 'on') {
+            $subscriber->update(['notifications_enabled' => true]);
+            $this->sendText($subscriber->phone_number, "🔔 *Notifications Enabled*\n\nYou'll receive match updates again!");
+            return ['status' => 'notifications_on'];
+        }
+
+        if ($textLower === 'notifications off' || $textLower === 'off') {
+            $subscriber->update(['notifications_enabled' => false]);
+            $this->sendText($subscriber->phone_number, "🔕 *Notifications Disabled*\n\nType *start* to resume anytime.");
+            return ['status' => 'notifications_off'];
+        }
+
+        // Handle status request
+        if ($textLower === 'status' || $textLower === 'my account') {
+            $this->sendAccountStatus($subscriber);
+            return ['status' => 'status_sent'];
+        }
+
+        // Handle menu/home
+        if (in_array($textLower, ['menu', 'home', 'hi', 'hello', 'start'], true)) {
+            $this->sendMainMenu($subscriber->phone_number);
+            return ['status' => 'menu_sent'];
+        }
+
+        // Handle stop/pause
+        if (in_array($textLower, ['stop', 'pause', 'unsubscribe'], true)) {
+            $subscriber->update(['notifications_enabled' => false]);
+            $this->sendText($subscriber->phone_number, "⏸️ *Notifications Paused*\n\nYou won't receive match updates.\nType *start* anytime to resume!");
+            return ['status' => 'paused'];
+        }
+
+        // Check if it's a team name for favorite setting
+        if ($this->isTeamName($textLower)) {
+            $subscriber->update(['favorite_team' => ucfirst($text)]);
+            $this->sendText($subscriber->phone_number, "🌟 *Favorite Team Set!*\n\nYou'll get extra updates for *" . ucfirst($text) . "*!\n\nType *menu* for more options");
+            return ['status' => 'favorite_set'];
+        }
+
+        // Handle "next [team]" e.g. "next brazil"
+        if (str_starts_with($textLower, 'next ')) {
+            $team = trim(substr($text, 5));
+            $this->sendTeamNextMatch($subscriber->phone_number, $team);
+            return ['status' => 'next_match_sent'];
+        }
+
+        // Route other commands
+        if (in_array($textLower, ['demo'], true)) {
+            $this->sendText($subscriber->phone_number, "🎬 Demo mode removed! You now have full tournament access.\n\nType *menu* to see your options.");
+            return ['status' => 'demo_removed'];
+        }
+
+        if (in_array($textLower, ['subscribe', 'opt in', 'join'], true)) {
+            $this->sendText($subscriber->phone_number, "✅ You're already subscribed with full tournament access!\n\nType *menu* to customize your experience.");
+            return ['status' => 'already_subscribed'];
+        }
+
+        if (in_array($textLower, ['pricing', 'price'], true)) {
+            $this->sendText($subscriber->phone_number, "🎉 Good news! You have full tournament access at no cost.\n\nType *menu* to customize your experience.");
+            return ['status' => 'free_access'];
+        }
+
+        if (in_array($textLower, ['table', 'standings', 'groups'], true)) {
+            $this->sendStandings($subscriber->phone_number);
+            return ['status' => 'standings_sent'];
+        }
+
+        if (in_array($textLower, ['results', 'scores', 'today'], true)) {
+            $this->sendTodayResults($subscriber->phone_number);
+            return ['status' => 'results_sent'];
+        }
+
+        if (in_array($textLower, ['upcoming', 'schedule', 'fixtures'], true)) {
+            $this->sendUpcoming($subscriber->phone_number);
+            return ['status' => 'upcoming_sent'];
+        }
+
+        if ($textLower === 'next') {
+            $this->sendTeamNextMatch($subscriber->phone_number, $subscriber->favorite_team ?? '');
+            return ['status' => 'next_sent'];
+        }
+
+        if (in_array($textLower, ['lineups', 'lineup', 'starting 11', 'xi'], true)) {
+            $this->sendLineups($subscriber->phone_number);
+            return ['status' => 'lineups_sent'];
+        }
+
+        if (in_array($textLower, ['stats', 'statistics', 'live stats'], true)) {
+            $this->sendLiveStats($subscriber->phone_number);
+            return ['status' => 'stats_sent'];
+        }
+
+        if (in_array($textLower, ['subs', 'substitutions', 'changes'], true)) {
+            $this->sendSubstitutions($subscriber->phone_number);
+            return ['status' => 'subs_sent'];
+        }
+
+        // Handle unknown command
+        $this->sendText($subscriber->phone_number, "🤔 I didn't understand that.\n\nTry these options:\n• Reply *menu* for main menu\n• Type a number 1-4\n• Type *help* for commands\n• Type a team name (e.g., Brazil)");
+        return ['status' => 'unknown_command'];
+    }
+
+    /**
+     * Send help commands
+     */
+    protected function sendHelpCommands(string $phone): bool
+    {
+        $message = "🤖 *GoalBot Commands*\n\n";
+        $message .= "*Quick Menu:*\n";
+        $message .= "1️⃣ *Favorite team* - Set your team\n";
+        $message .= "2️⃣ *Commentary style* - Digest or Live\n";
+        $message .= "3️⃣ *Schedule* - Today's matches\n";
+        $message .= "4️⃣ *Status* - Your settings\n\n";
+        $message .= "*Other Commands:*\n";
+        $message .= "• *menu* - Show main menu\n";
+        $message .= "• *stop* - Pause notifications\n";
+        $message .= "• *start* - Resume notifications\n";
+        $message .= "• Type any team name to set as favorite\n\n";
+        $message .= "Need help? Reply with your question!";
+        
+        return $this->sendText($phone, $message);
+    }
+
+    /**
+     * Send account status
+     */
+    protected function sendAccountStatus(Subscriber $subscriber): bool
+    {
+        $status = $subscriber->notifications_enabled ? 'ON' : 'OFF';
+        $style = ucfirst($subscriber->commentary_mode ?? 'digest');
+        $team = $subscriber->favorite_team ?? 'All teams';
+        $type = $subscriber->subscription_type ?? 'full_tournament';
+        
+        $message = "📊 *Your GoalBot Status*\n\n";
+        $message .= "🔔 *Notifications:* {$status}\n";
+        $message .= "📝 *Style:* {$style}\n";
+        $message .= "🌟 *Favorite:* {$team}\n";
+        $message .= "🎫 *Plan:* {$type}\n\n";
+        $message .= "Type *menu* to change any setting";
+        
+        return $this->sendText($subscriber->phone_number, $message);
+    }
+
+    /**
+     * Check if message is a team name
+     */
+    protected function isTeamName(string $message): bool
+    {
+        $commonTeams = [
+            'brazil', 'argentina', 'france', 'spain', 'germany', 'england',
+            'portugal', 'netherlands', 'belgium', 'italy', 'croatia', 'uruguay',
+            'mexico', 'usa', 'canada', 'japan', 'south korea', 'australia',
+            'morocco', 'senegal', 'ghana', 'nigeria', 'cameroon', 'tunisia',
+            'egypt', 'qatar', 'saudi arabia', 'iran', 'iraq', 'jordan'
+        ];
+        
+        return in_array(strtolower($message), $commonTeams);
+    }
+
+    /**
+     * Send substitutions
+     */
     protected function sendSubstitutions(string $phone): bool
     {
         $football = app(\App\Services\Football\FootballDataService::class);
