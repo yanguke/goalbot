@@ -92,8 +92,8 @@ class WhatsAppService
      */
     public function sendMainMenu(string $phoneNumber): bool
     {
-        $header = "🤖 Your Personal AI Assistant";
-        $body = "I'm here to guide you through World Cup 2026! Let me keep you up to date and manage all the important information so you never miss a moment.\n\nWhat can I help you with?";
+        $header = "🤖 GoalBot - Your Personal AI Assistant for the World Cup";
+        $body = "I'm GoalBot, here to guide you through the entire tournament! Let me keep you up to date and manage all the important information so you never miss a moment.\n\nWhat can I help you with?";
         $footer = "I'm always here when you need me! ⚡";
         
         $buttons = [
@@ -613,7 +613,7 @@ class WhatsAppService
     public function sendSmoothWelcome(string $phoneNumber): bool
     {
         $welcome = "⚽ *Welcome to GoalBot!*\n\n";
-        $welcome .= "Hi! I'm your personal AI assistant, here to guide you through the entire World Cup 2026 journey. 🤖\n\n";
+        $welcome .= "Hi! I'm GoalBot, your personal AI assistant for the World Cup, here to guide you through the entire tournament. 🤖\n\n";
         $welcome .= "I'll keep you up to date and manage all the important information so you never miss a moment:\n";
         $welcome .= "⚡ *Instant goal alerts* as they happen\n";
         $welcome .= "🎯 *Key match moments* you don't want to miss\n";
