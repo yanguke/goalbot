@@ -764,8 +764,9 @@ class WhatsAppService
                 return ['status' => 'demo_removed'];
                 
             case 'subscribe':
-                $this->sendText($subscriber->phone_number, "✅ You're already subscribed with full tournament access!\n\nType *menu* to customize your experience.");
-                return ['status' => 'already_subscribed'];
+            case 'subscribe_alerts':
+                $this->subscribeUser($subscriber);
+                return ['status' => 'subscribe_shown'];
                 
             case 'pay_per_match':
                 $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
@@ -800,10 +801,10 @@ class WhatsAppService
                         
                         switch ($action) {
                             case 'lineups':
-                                $this->sendLineups($subscriber->phone_number);
+                                $this->sendLineups($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'lineups_sent'];
                             case 'stats':
-                                $this->sendLiveStats($subscriber->phone_number);
+                                $this->sendLiveStats($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'stats_sent'];
                             case 'alerts':
                                 $this->sendMatchAlertPrompt($subscriber->phone_number, $fixtureId);
@@ -835,10 +836,10 @@ class WhatsAppService
         return ['status' => 'paywall_sent'];
     }
 
-    protected function sendLineups(string $phone): bool
+    protected function sendLineups(string $phone, ?string $fixtureId = null): bool
     {
         $football = app(\App\Services\Football\FootballDataService::class);
-        $fixtureId = $football->getTodayFixtureId();
+        $fixtureId = $fixtureId ?? (string) $football->getTodayFixtureId();
 
         if (!$fixtureId) {
             return $this->sendText($phone, "⚽ No live or today's match found. Check back closer to kickoff!");
@@ -862,9 +863,14 @@ class WhatsAppService
         return $this->sendText($phone, trim($msg));
     }
 
-    protected function sendLiveStats(string $phone): bool
+    protected function sendLiveStats(string $phone, ?string $fixtureId = null): bool
     {
         $football = app(\App\Services\Football\FootballDataService::class);
+
+        if ($fixtureId) {
+            return $this->sendStatsForFixture($phone, (int) $fixtureId, $football);
+        }
+
         $live = $football->getLiveMatches();
 
         if (empty($live)) {
@@ -907,7 +913,39 @@ class WhatsAppService
         return $this->sendText($phone, trim($msg));
     }
 
-        
+    protected function sendStatsForFixture(string $phone, int $fixtureId, $football): bool
+    {
+        $stats = $football->getLiveStats($fixtureId);
+
+        if (empty($stats)) {
+            return $this->sendText($phone, "📊 Stats not available yet for this match. Try again once it kicks off!");
+        }
+
+        $statMap = [];
+        $teams   = [];
+        foreach ($stats as $teamStats) {
+            $tName   = $teamStats['team']['name'];
+            $teams[] = $tName;
+            foreach ($teamStats['statistics'] ?? [] as $s) {
+                $statMap[$s['type']][$tName] = $s['value'] ?? '-';
+            }
+        }
+
+        $home = $teams[0] ?? '?';
+        $away = $teams[1] ?? '?';
+        $msg  = "📊 *Stats — {$home} vs {$away}*\n\n";
+
+        foreach (['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards'] as $stat) {
+            if (isset($statMap[$stat])) {
+                $h = $statMap[$stat][$home] ?? '-';
+                $a = $statMap[$stat][$away] ?? '-';
+                $msg .= "{$h} | {$stat} | {$a}\n";
+            }
+        }
+
+        return $this->sendText($phone, trim($msg));
+    }
+
     /**
      * Send favorite team prompt
      */
@@ -1040,86 +1078,124 @@ class WhatsAppService
     protected function sendMatchDetails(string $phone, string $fixtureId): bool
     {
         $football = app(\App\Services\Football\FootballDataService::class);
-        
-        // Get match details
-        $matches = $football->getTodayResults();
+
+        // Search today, yesterday, 2 days ago, and upcoming
         $match = null;
-        
-        foreach ($matches as $m) {
-            if ((string)$m['fixture']['id'] === $fixtureId) {
-                $match = $m;
-                break;
-            }
-        }
-        
-        if (!$match) {
-            // Try upcoming matches if not found in today's results
-            $upcoming = $football->getUpcomingMatches(5);
-            foreach ($upcoming as $m) {
+        $pools = [
+            $football->getTodayResults(),
+            $football->getMatchesForDate(now()->subDay()->toDateString()),
+            $football->getMatchesForDate(now()->subDays(2)->toDateString()),
+            $football->getUpcomingMatches(5),
+        ];
+        foreach ($pools as $pool) {
+            foreach ($pool as $m) {
                 if ((string)$m['fixture']['id'] === $fixtureId) {
                     $match = $m;
-                    break;
+                    break 2;
                 }
             }
         }
-        
+
         if (!$match) {
             return $this->sendText($phone, "❌ Match details not found. Please try again.");
         }
-        
-        $home = $match['teams']['home']['name'];
-        $away = $match['teams']['away']['name'];
-        $hg = $match['goals']['home'] ?? '-';
-        $ag = $match['goals']['away'] ?? '-';
-        $status = $match['fixture']['status']['short'] ?? 'NS';
+
+        $home    = $match['teams']['home']['name'];
+        $away    = $match['teams']['away']['name'];
+        $hg      = $match['goals']['home'] ?? '-';
+        $ag      = $match['goals']['away'] ?? '-';
+        $status  = $match['fixture']['status']['short'] ?? 'NS';
         $elapsed = $match['fixture']['status']['elapsed'] ?? 0;
-        
+        $fId     = (int) $fixtureId;
+
+        // ── PRE-MATCH (NS) ──────────────────────────────────────────────
+        if ($status === 'NS') {
+            $kickoff = \Carbon\Carbon::parse($match['fixture']['date'])
+                ->timezone('Africa/Nairobi')->format('D d M, H:i') . ' EAT';
+
+            $bodyLines = ["⏰ *Kickoff:* {$kickoff}", ""];
+
+            // Predictions
+            $pred = $football->getPredictions($fId);
+            if ($pred) {
+                $pct    = $pred['predictions']['percent'] ?? [];
+                $advice = $pred['predictions']['advice'] ?? null;
+                $winner = $pred['predictions']['winner']['name'] ?? null;
+                if ($winner)  $bodyLines[] = "🎯 *Predicted winner:* {$winner}";
+                if ($advice)  $bodyLines[] = "💡 *Tip:* {$advice}";
+                if ($pct)     $bodyLines[] = "📊 *Win%:* {$home} " . ($pct['home'] ?? '?') . " | Draw " . ($pct['draw'] ?? '?') . " | {$away} " . ($pct['away'] ?? '?');
+            }
+
+            // Odds
+            $odds = $football->getOdds($fId);
+            if (!empty($odds['bets'])) {
+                $mw = $odds['bets']['Match Winner'] ?? $odds['bets'][array_key_first($odds['bets'])] ?? [];
+                if ($mw) {
+                    $parts = [];
+                    foreach ($mw as $label => $odd) $parts[] = "{$label} {$odd}";
+                    $bodyLines[] = "💰 *Odds:* " . implode(' | ', $parts);
+                }
+            }
+
+            // Injuries
+            $injuries = $football->getInjuries($fId);
+            if (!empty($injuries)) {
+                $names = collect($injuries)->take(3)->map(fn($i) => $i['player']['name'] . ' (' . $i['team']['name'] . ')')->implode(', ');
+                $bodyLines[] = "🏥 *Injuries:* {$names}";
+            }
+
+            $sections = [
+                ['title' => '🔍 Match Info', 'rows' => [
+                    ['id' => "lineups_{$fixtureId}",  'title' => '👥 Starting Lineups',   'description' => 'See who is in the starting XI'],
+                    ['id' => "subscribe_alerts",       'title' => '🔔 Get Goal Alerts',    'description' => 'Instant alert when a goal goes in'],
+                    ['id' => "commentary_{$fixtureId}",'title' => '💬 Live Commentary',    'description' => 'Minute-by-minute match commentary'],
+                ]],
+                ['title' => '📊 More', 'rows' => [
+                    ['id' => 'table',    'title' => '🏆 Group Standings', 'description' => 'See the full group table'],
+                    ['id' => 'schedule', 'title' => '� All Today\'s Matches', 'description' => 'View the full matchday'],
+                ]],
+            ];
+
+            return ($this->messageSender->sendListMessage(
+                $phone,
+                "⚽ {$home} vs {$away}",
+                implode("\n", $bodyLines),
+                'Tap below to explore ↓',
+                '🔍 Explore Match',
+                $sections
+            )['success'] ?? false);
+        }
+
+        // ── LIVE / POST-MATCH ────────────────────────────────────────────
         $statusLabel = match ($status) {
             '1H', '2H' => "🔴 LIVE {$elapsed}'",
-            'HT' => '⏸ HT',
-            'FT' => '✅ FT',
-            'NS' => '⏰ Not Started',
-            default => $status,
+            'HT'        => '⏸ Half Time',
+            'FT'        => '✅ Full Time',
+            'AET'       => '✅ AET',
+            'PEN'       => '✅ Penalties',
+            default     => $status,
         };
-        
-        // Send match overview
-        $header = "⚽ Match Details";
-        $body = "*{$home} {$hg} - {$ag} {$away}*\nStatus: {$statusLabel}\n\nChoose what you'd like to explore:";
-        $footer = "Deep dive into this match! 🔍";
-        
-        $buttons = [
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'lineups',
-                    'title' => '👥 Lineups'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'stats',
-                    'title' => '📊 Stats'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'alerts',
-                    'title' => '🔔 Alerts'
-                ]
-            ]
+
+        $sections = [
+            ['title' => '⚽ This Match', 'rows' => [
+                ['id' => "lineups_{$fixtureId}",    'title' => '👥 Lineups',          'description' => 'Starting XIs and formations'],
+                ['id' => "stats_{$fixtureId}",      'title' => '📊 Live Stats',       'description' => 'Possession, shots, corners'],
+                ['id' => "commentary_{$fixtureId}", 'title' => '💬 Commentary',       'description' => 'Minute-by-minute action'],
+            ]],
+            ['title' => '🔔 Alerts', 'rows' => [
+                ['id' => 'subscribe_alerts', 'title' => '⚽ Get Goal Alerts', 'description' => 'Instant alerts for every goal'],
+                ['id' => 'schedule',         'title' => '📅 All Today\'s Matches', 'description' => 'See the full matchday'],
+            ]],
         ];
-        
-        $result = $this->messageSender->sendInteractiveButtons(
-            $phone, 
-            $header, 
-            $body, 
-            $footer, 
-            $buttons
-        );
-        
-        return $result['success'] ?? false;
+
+        return ($this->messageSender->sendListMessage(
+            $phone,
+            "⚽ {$home} {$hg}–{$ag} {$away}",
+            "{$statusLabel}\n\nSelect an option below to dive deeper:",
+            'Tap any option 👇',
+            '🔍 Explore Match',
+            $sections
+        )['success'] ?? false);
     }
     
     /**
