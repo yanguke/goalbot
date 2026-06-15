@@ -92,43 +92,96 @@ class WhatsAppService
      */
     public function sendMainMenu(string $phoneNumber): bool
     {
-        $header = "🤖 GoalBot - Your Personal AI Assistant for the World Cup";
-        $body = "I'm GoalBot, here to guide you through the entire tournament! Let me keep you up to date and manage all the important information so you never miss a moment.\n\nWhat can I help you with?";
-        $footer = "I'm always here when you need me! ⚡";
-        
+        // Build a live score hook from today's matches
+        $liveHook = $this->buildLiveScoreHook();
+
+        $header = "⚽ FIFA World Cup 2026";
+        $body = $liveHook . "\n\nAsk me anything — scores, lineups, groups, predictions. Or tap below 👇";
+        $footer = "You can also just type any question!";
+
         $buttons = [
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'schedule',
+                    'title' => '📅 Today\'s Matches'
+                ]
+            ],
+            [
+                'type' => 'reply',
+                'reply' => [
+                    'id' => 'table',
+                    'title' => '🏆 Group Standings'
+                ]
+            ],
             [
                 'type' => 'reply',
                 'reply' => [
                     'id' => 'favorite',
                     'title' => '⭐ My Team'
                 ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'commentary',
-                    'title' => '🔔 Alert Settings'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'schedule',
-                    'title' => '📊 Today\'s Matches'
-                ]
             ]
         ];
-        
+
         $result = $this->messageSender->sendInteractiveButtons(
-            $phoneNumber, 
-            $header, 
-            $body, 
-            $footer, 
+            $phoneNumber,
+            $header,
+            $body,
+            $footer,
             $buttons
         );
-        
+
         return $result['success'] ?? false;
+    }
+
+    /**
+     * Build a short live score hook for the main menu opening message
+     */
+    protected function buildLiveScoreHook(): string
+    {
+        try {
+            $football = app(\App\Services\Football\FootballDataService::class);
+            $live = $football->getLiveMatches();
+            $today = $football->getMatchesForDate(now()->toDateString());
+
+            // Prefer live matches for maximum urgency
+            if (!empty($live)) {
+                $m = $live[0];
+                $home = $m['teams']['home']['name'];
+                $away = $m['teams']['away']['name'];
+                $hg   = $m['goals']['home'] ?? 0;
+                $ag   = $m['goals']['away'] ?? 0;
+                $min  = $m['fixture']['status']['elapsed'] ?? '?';
+                return "🔴 *LIVE NOW:* {$home} {$hg}–{$ag} {$away} ({$min}')";
+            }
+
+            // Show today's results or upcoming
+            $played = collect($today)->filter(fn($m) => in_array($m['fixture']['status']['short'], ['FT','AET','PEN']))->values();
+            $upcoming = collect($today)->filter(fn($m) => $m['fixture']['status']['short'] === 'NS')->values();
+
+            $lines = [];
+            foreach ($played->take(2) as $m) {
+                $home = $m['teams']['home']['name'];
+                $away = $m['teams']['away']['name'];
+                $hg   = $m['goals']['home'];
+                $ag   = $m['goals']['away'];
+                $lines[] = "✅ {$home} {$hg}–{$ag} {$away}";
+            }
+            foreach ($upcoming->take(2) as $m) {
+                $home = $m['teams']['home']['name'];
+                $away = $m['teams']['away']['name'];
+                $time = \Carbon\Carbon::parse($m['fixture']['date'])->timezone('Africa/Nairobi')->format('H:i');
+                $lines[] = "⏰ {$home} vs {$away} at {$time}";
+            }
+
+            if (!empty($lines)) {
+                return implode("\n", $lines);
+            }
+        } catch (\Exception $e) {
+            // Silently fall through
+        }
+
+        return "The World Cup is here! 48 teams, 104 matches, one trophy. 🏆";
     }
     
     /**
