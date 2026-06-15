@@ -1406,9 +1406,8 @@ class WhatsAppService
             return ['status' => 'subs_sent'];
         }
 
-        // Handle unknown command
-        $this->sendText($subscriber->phone_number, "🤔 I didn't understand that.\n\nTry these options:\n• Reply *menu* for main menu\n• Type a number 1-4\n• Type *help* for commands\n• Type a team name (e.g., Brazil)");
-        return ['status' => 'unknown_command'];
+        // Route everything else to Claude AI with full RAG context
+        return $this->handleAIQuestion($subscriber, $text);
     }
 
     /**
