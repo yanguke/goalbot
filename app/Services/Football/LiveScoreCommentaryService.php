@@ -166,11 +166,10 @@ class LiveScoreCommentaryService
                 Log::warning('DB slug rejected - uses API-Football ID', ['fixture_id' => $matchId, 'slug' => $record->livescore_slug]);
             }
 
-            // Search results, live, and fixtures pages on LiveScore
+            // Tournament homepage has ALL matches; results/fixtures pages show only 1 each
             $pages = [
-                "https://www.livescore.com/en/football/international/world-cup-2026/results/",
-                "https://www.livescore.com/en/football/",
                 "https://www.livescore.com/en/football/international/world-cup-2026/",
+                "https://www.livescore.com/en/football/international/world-cup-2026/results/",
                 "https://www.livescore.com/en/football/international/world-cup-2026/fixtures/",
             ];
 
