@@ -706,7 +706,7 @@ class WhatsAppService
         $subscriber = $this->verifyUser($phoneNumber);
         
         // Handle by type
-        if ($message['type'] === 'button') {
+        if ($message['type'] === 'button' || $message['type'] === 'list') {
             return $this->handleButtonClick($subscriber, $message['id']);
         }
         
