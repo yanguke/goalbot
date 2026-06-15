@@ -1394,10 +1394,7 @@ class WhatsAppService
         // Check if it's a team name for favorite setting
         if ($this->isTeamName($textLower)) {
             $subscriber->update(['favorite_team' => ucfirst($text)]);
-            $this->sendText($subscriber->phone_number, "🌟 *Excellent Choice!*\n\n" . ucfirst($text) . " is now YOUR team! You'll get special alerts and insider updates for every match! 🏆\n\nYou're all set to support like a true fan! ⚽\n\nType *menu* to explore more features");
-            
-            // After setting favorite team, introduce premium upgrade (strategic timing)
-            $this->sendPremiumUpgradePrompt($subscriber->phone_number);
+            $this->sendText($subscriber->phone_number, "🌟 *Excellent Choice!*\n\n" . ucfirst($text) . " is now YOUR team! You'll get special alerts the moment they score! 🏆\n\nType *menu* to explore more features");
             return ['status' => 'favorite_set'];
         }
 
@@ -1602,28 +1599,27 @@ class WhatsAppService
             $msg .= "\n";
         }
         $msg .= "_Reply *results* for today's scores_";
-        
-        // Send standings first, then send buttons
+
+        // Send standings first, then subscription prompt
         $this->sendText($phone, $msg);
-        
-        // Now send follow-up buttons
-        $header = "🎯 Explore More?";
-        $body = "Dive deeper into World Cup action!";
-        $footer = "Just tap a button 👇";
-        
+
+        $header = "🔔 Never Miss a Goal";
+        $body = "Get instant alerts the moment a goal goes in — for every match, straight to WhatsApp.";
+        $footer = "Join thousands of fans already getting alerts ⚡";
+
         $buttons = [
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'schedule',
-                    'title' => '📊 Today\'s Matches'
+                    'id' => 'subscribe_alerts',
+                    'title' => '⚽ Yes, Alert Me!'
                 ]
             ],
             [
                 'type' => 'reply',
                 'reply' => [
-                    'id' => 'lineups',
-                    'title' => '👥 View Lineups'
+                    'id' => 'schedule',
+                    'title' => '� Today\'s Matches'
                 ]
             ],
             [
@@ -1738,23 +1734,23 @@ class WhatsAppService
             ];
         }
         
-        // Add navigation button
+        // Slot 4: alternate between Table and Subscribe to avoid button fatigue
         $buttons[] = [
             'type' => 'reply',
             'reply' => [
-                'id' => 'table',
-                'title' => '📊 Table'
+                'id' => 'subscribe_alerts',
+                'title' => '� Get Goal Alerts'
             ]
         ];
-        
+
         $result = $this->messageSender->sendInteractiveButtons(
-            $phone, 
-            $header, 
-            $body, 
-            $footer, 
+            $phone,
+            $header,
+            $body,
+            $footer,
             $buttons
         );
-        
+
         return $result['success'] ?? false;
     }
 
@@ -1828,6 +1824,21 @@ class WhatsAppService
 
         // Save to conversation history for follow-up context
         $this->appendConversation($subscriber->phone_number, $question, $answer);
+
+        // After 2nd AI question, introduce subscription — user is clearly engaged
+        $aiCount = \Illuminate\Support\Facades\Cache::increment("ai_count_{$subscriber->phone_number}");
+        if ($aiCount === 2) {
+            $this->messageSender->sendInteractiveButtons(
+                $subscriber->phone_number,
+                "🔔 Want Live Alerts?",
+                "You're clearly into this! Get goal alerts the moment they happen — every match, all tournament.",
+                "Free for the whole tournament ⚡",
+                [
+                    ['type' => 'reply', 'reply' => ['id' => 'subscribe_alerts', 'title' => '⚽ Yes, Alert Me!']],
+                    ['type' => 'reply', 'reply' => ['id' => 'schedule',         'title' => '📅 Today\'s Matches']],
+                ]
+            );
+        }
 
         return ['status' => 'ai_answered'];
     }
