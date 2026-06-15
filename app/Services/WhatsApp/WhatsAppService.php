@@ -1697,58 +1697,48 @@ class WhatsAppService
             return $this->sendText($phone, "📋 No matches today. Reply *upcoming* for the next fixtures.");
         }
 
-        // Create interactive match buttons
-        $header = "📊 Today's World Cup Matches";
-        $body = "Select a match to explore lineups, stats, and set alerts!";
-        $footer = "Tap any match for details 👇";
-        
-        $buttons = [];
-        foreach (array_slice($matches, 0, 3) as $m) {
-            $home = $m['teams']['home']['name'];
-            $away = $m['teams']['away']['name'];
-            $hg = $m['goals']['home'] ?? '-';
-            $ag = $m['goals']['away'] ?? '-';
-            $status = $m['fixture']['status']['short'];
+        // Build list message rows — one per match, plus a subscribe row
+        $rows = [];
+        foreach (array_slice($matches, 0, 9) as $m) {
+            $home    = $m['teams']['home']['name'];
+            $away    = $m['teams']['away']['name'];
+            $hg      = $m['goals']['home'] ?? '-';
+            $ag      = $m['goals']['away'] ?? '-';
+            $status  = $m['fixture']['status']['short'];
             $elapsed = $m['fixture']['status']['elapsed'];
+
             $statusLabel = match ($status) {
-                '1H', '2H' => "LIVE {$elapsed}'",
-                'HT' => 'HT',
-                'FT' => 'FT',
-                'AET' => 'AET',
-                'PEN' => 'PEN',
-                default => $status,
+                '1H', '2H' => "🔴 LIVE {$elapsed}'",
+                'HT'        => '⏸ Half Time',
+                'FT'        => '✅ Full Time',
+                'AET'       => '✅ AET',
+                'PEN'       => '✅ Penalties',
+                'NS'        => '⏰ ' . \Carbon\Carbon::parse($m['fixture']['date'])->timezone('Africa/Nairobi')->format('H:i') . ' EAT',
+                default     => $status,
             };
-            
-            // Shorten button titles to prevent API issues
-            $title = substr($home, 0, 8) . " {$hg}-{$ag} " . substr($away, 0, 8) . " ({$statusLabel})";
-            if (strlen($title) > 20) {
-                $title = substr($home, 0, 6) . " v " . substr($away, 0, 6);
-            }
-            
-            $buttons[] = [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'match_' . $m['fixture']['id'],
-                    'title' => $title
-                ]
+
+            $rows[] = [
+                'id'          => 'match_' . $m['fixture']['id'],
+                'title'       => substr($home, 0, 24) . ' v ' . substr($away, 0, 24),
+                'description' => "{$hg} – {$ag}  |  {$statusLabel}",
             ];
         }
-        
-        // Slot 4: alternate between Table and Subscribe to avoid button fatigue
-        $buttons[] = [
-            'type' => 'reply',
-            'reply' => [
-                'id' => 'subscribe_alerts',
-                'title' => '� Get Goal Alerts'
-            ]
+
+        $sections = [
+            ['title' => "📅 Today's Matches", 'rows' => $rows],
+            ['title' => '🔔 Alerts', 'rows' => [
+                ['id' => 'subscribe_alerts', 'title' => '⚽ Get Goal Alerts', 'description' => 'Instant alerts every time a goal goes in'],
+                ['id' => 'table',            'title' => '🏆 Group Standings',  'description' => 'See who\'s top of each group'],
+            ]],
         ];
 
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->messageSender->sendListMessage(
             $phone,
-            $header,
-            $body,
-            $footer,
-            $buttons
+            '⚽ FIFA World Cup 2026',
+            'All of today\'s matches. Tap one to explore lineups, stats, and live commentary.',
+            'You can also just type any question!',
+            '📋 View Matches',
+            $sections
         );
 
         return $result['success'] ?? false;

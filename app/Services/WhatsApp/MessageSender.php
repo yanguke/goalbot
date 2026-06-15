@@ -238,6 +238,54 @@ class MessageSender
     }
     
     /**
+     * Send an interactive list message (up to 10 rows across sections).
+     * Opens as a modal sheet when the user taps the button.
+     *
+     * @param string $to
+     * @param string $header     Bold title at top of message
+     * @param string $body       Main message text
+     * @param string $footer     Small grey text at bottom
+     * @param string $buttonText Label on the trigger button (e.g. "View Matches")
+     * @param array  $sections   [ ['title' => 'Group A', 'rows' => [ ['id'=>'...','title'=>'...','description'=>'...'] ]] ]
+     */
+    public function sendListMessage(string $to, string $header, string $body, string $footer, string $buttonText, array $sections): array
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type'    => 'individual',
+            'to'                => $this->formatPhoneNumber($to),
+            'type'              => 'interactive',
+            'interactive'       => [
+                'type'   => 'list',
+                'header' => ['type' => 'text', 'text' => $header],
+                'body'   => ['text' => $body],
+                'footer' => ['text' => $footer],
+                'action' => [
+                    'button'   => $buttonText,
+                    'sections' => $sections,
+                ],
+            ],
+        ];
+
+        try {
+            $response = Http::withToken($this->accessToken)
+                ->post("{$this->apiUrl}/{$this->phoneNumberId}/messages", $payload);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp list message sent', ['to' => $to]);
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('WhatsApp list message failed', ['to' => $to, 'error' => $response->json()]);
+            return ['success' => false, 'error' => $response->json()];
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp list message exception', ['to' => $to, 'error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Verify webhook subscription
      */
     public function verifyWebhook(string $verifyToken, string $challenge): ?string
