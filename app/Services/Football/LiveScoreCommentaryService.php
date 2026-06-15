@@ -153,85 +153,76 @@ class LiveScoreCommentaryService
     {
         $cacheKey = "livescore_slug_{$matchId}";
         return Cache::remember($cacheKey, 3600, function () use ($homeTeam, $awayTeam, $matchId) {
-            // First check if we have it in the database
+            // First check database — only trust records where the slug ID differs from fixture_id
             $record = \App\Models\LiveScoreCommentaryUrl::where('fixture_id', $matchId)->first();
             if ($record && $record->livescore_slug) {
-                Log::info('LiveScore slug found in database', ['fixture_id' => $matchId, 'slug' => $record->livescore_slug]);
-                return $record->livescore_slug;
-            }
-            try {
-                // Fetch the World Cup 2026 fixtures page
-                $url = "https://www.livescore.com/en/football/international/world-cup-2026/fixtures/";
-                $response = Http::withHeaders($this->headers)->timeout(10)->get($url);
-
-                if (!$response->successful()) {
-                    Log::warning('LiveScore fixtures page fetch failed', ['status' => $response->status()]);
-                    return null;
+                preg_match('/\/(\d+)$/', $record->livescore_slug, $m);
+                $slugId = $m[1] ?? null;
+                // Reject if the slug ID matches the API-Football fixture_id (wrong)
+                if ($slugId && $slugId !== (string)$matchId) {
+                    Log::info('LiveScore slug found in database', ['fixture_id' => $matchId, 'slug' => $record->livescore_slug]);
+                    return $record->livescore_slug;
                 }
+                Log::warning('DB slug rejected - uses API-Football ID', ['fixture_id' => $matchId, 'slug' => $record->livescore_slug]);
+            }
 
-                // Parse JSON from the page
-                preg_match('/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s', $response->body(), $matches);
-                if (empty($matches[1])) return null;
+            // Search both results and fixtures pages on LiveScore
+            $pages = [
+                "https://www.livescore.com/en/football/international/world-cup-2026/results/",
+                "https://www.livescore.com/en/football/international/world-cup-2026/fixtures/",
+            ];
 
-                $json = json_decode($matches[1], true);
-                if (!$json) return null;
+            foreach ($pages as $url) {
+                try {
+                    $response = Http::withHeaders($this->headers)->timeout(10)->get($url);
+                    if (!$response->successful()) continue;
 
-                // Navigate to events array
-                $events = $json['props']['pageProps']['initialData']['sections'][0]['events'] ?? [];
-                if (empty($events)) return null;
+                    preg_match('/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s', $response->body(), $m);
+                    if (empty($m[1])) continue;
 
-                // Find matching event by team names (case-insensitive)
-                foreach ($events as $event) {
-                    $eventHome = strtolower($event['homeTeamName'] ?? '');
-                    $eventAway = strtolower($event['awayTeamName'] ?? '');
-                    $searchHome = strtolower($homeTeam);
-                    $searchAway = strtolower($awayTeam);
+                    $json = json_decode($m[1], true);
+                    if (!$json) continue;
 
-                    if (
-                        ($eventHome === $searchHome && $eventAway === $searchAway) ||
-                        ($eventHome === $searchAway && $eventAway === $searchHome)
-                    ) {
-                        $eventId = $event['id'] ?? '';
-                        if ($eventId) {
-                            // Build slug from team names and ID
-                            $slugHome = strtolower(str_replace(' ', '-', $event['homeTeamName'] ?? ''));
-                            $slugAway = strtolower(str_replace(' ', '-', $event['awayTeamName'] ?? ''));
-                            return "{$slugHome}-vs-{$slugAway}/{$eventId}";
+                    // Search all sections for events
+                    $sections = $json['props']['pageProps']['initialData']['sections'] ?? [];
+                    foreach ($sections as $section) {
+                        $events = $section['events'] ?? [];
+                        foreach ($events as $event) {
+                            $eventHome = strtolower($event['homeTeamName'] ?? '');
+                            $eventAway = strtolower($event['awayTeamName'] ?? '');
+                            $searchHome = strtolower($homeTeam);
+                            $searchAway = strtolower($awayTeam);
+
+                            // Exact match or fuzzy (contains check for special chars like Türkiye/Turkey)
+                            $homeMatch = $eventHome === $searchHome || str_contains($eventHome, $searchHome) || str_contains($searchHome, $eventHome);
+                            $awayMatch = $eventAway === $searchAway || str_contains($eventAway, $searchAway) || str_contains($searchAway, $eventAway);
+
+                            if ($homeMatch && $awayMatch) {
+                                $eventId = $event['id'] ?? '';
+                                if ($eventId) {
+                                    $slugHome = strtolower(str_replace(' ', '-', $event['homeTeamName'] ?? ''));
+                                    $slugAway = strtolower(str_replace(' ', '-', $event['awayTeamName'] ?? ''));
+                                    $slug = "{$slugHome}-vs-{$slugAway}/{$eventId}";
+
+                                    // Save correct slug to DB
+                                    \App\Models\LiveScoreCommentaryUrl::updateOrCreate(
+                                        ['fixture_id' => $matchId],
+                                        ['home_team' => $homeTeam, 'away_team' => $awayTeam, 'livescore_slug' => $slug]
+                                    );
+
+                                    Log::info('LiveScore slug discovered', ['fixture_id' => $matchId, 'slug' => $slug]);
+                                    return $slug;
+                                }
+                            }
                         }
                     }
+                } catch (\Exception $e) {
+                    Log::error('LiveScore slug discovery error', ['url' => $url, 'error' => $e->getMessage()]);
                 }
-
-                // Fall back: construct slug from team names and try to verify it exists
-                Log::info('LiveScore slug not found on fixtures page, trying constructed slug', [
-                    'home' => $homeTeam,
-                    'away' => $awayTeam,
-                    'matchId' => $matchId
-                ]);
-                
-                $fallbackSlug = strtolower(str_replace(' ', '-', $homeTeam)) . '-vs-' . strtolower(str_replace(' ', '-', $awayTeam)) . "/{$matchId}";
-                
-                // Verify the constructed slug actually exists by checking the page
-                if ($this->verifySlugExists($fallbackSlug)) {
-                    Log::info('Constructed slug verified successfully', ['slug' => $fallbackSlug]);
-                    return $fallbackSlug;
-                }
-                
-                Log::warning('Both discovery and fallback failed for match', [
-                    'home' => $homeTeam,
-                    'away' => $awayTeam,
-                    'matchId' => $matchId,
-                    'fallback' => $fallbackSlug
-                ]);
-                return null;
-            } catch (\Exception $e) {
-                Log::error('LiveScore slug discovery error', [
-                    'error' => $e->getMessage(),
-                    'home' => $homeTeam,
-                    'away' => $awayTeam,
-                    'matchId' => $matchId
-                ]);
-                return null;
             }
+
+            Log::warning('LiveScore slug not found on any page', ['home' => $homeTeam, 'away' => $awayTeam, 'matchId' => $matchId]);
+            return null;
         });
     }
 
