@@ -23,27 +23,44 @@ class WhatsAppController extends Controller
     public function handle(Request $request): \Illuminate\Http\JsonResponse
     {
         $payload = $request->all();
-        
-        // Log incoming webhook for debugging
-        Log::info('WhatsApp webhook received', $payload);
-        
+
+        // Log raw JSON to avoid Laravel's depth-limit normalizer truncating error objects
+        Log::info('WhatsApp webhook received', ['raw' => json_encode($payload)]);
+
         // Extract message data
-        $entry = $payload['entry'][0] ?? null;
+        $entry   = $payload['entry'][0] ?? null;
         $changes = $entry['changes'][0] ?? null;
-        $value = $changes['value'] ?? null;
+        $value   = $changes['value'] ?? null;
+
+        // ── Handle delivery status callbacks ──────────────────────────────
+        if (!empty($value['statuses'])) {
+            foreach ($value['statuses'] as $status) {
+                $this->handleDeliveryStatus($status);
+            }
+            return response()->json(['status' => 'received']);
+        }
+
         $messageData = $value['messages'][0] ?? null;
-        
+
         if (!$messageData) {
-            // Could be a status update or other event
             return response()->json(['status' => 'received']);
         }
         
-        $from = $messageData['from'] ?? null;
+        $from        = $messageData['from'] ?? null;
         $messageType = $messageData['type'] ?? null;
         $messageBody = strtolower(trim($messageData['text']['body'] ?? ''));
-        
-        if ($from && $messageBody) {
-            $this->processIncomingMessage($from, $messageBody);
+
+        // Stamp last inbound message time — reopens the 24h window tracking
+        if ($from) {
+            Subscriber::where('phone_number', $this->normalizePhoneNumber($from))
+                ->update([
+                    'last_message_in_at' => now(),
+                    'window_failed'      => false,
+                ]);
+        }
+
+        if ($from && ($messageBody || $messageType === 'interactive')) {
+            $this->processIncomingMessage($from, $messageBody, $messageData);
         }
         
         // Always return 200 quickly to acknowledge
@@ -51,9 +68,39 @@ class WhatsAppController extends Controller
     }
     
     /**
+     * Handle a WhatsApp delivery status callback.
+     * Error 131026 = message outside 24h window.
+     */
+    private function handleDeliveryStatus(array $status): void
+    {
+        $recipient = $status['recipient_id'] ?? null;
+        $state     = $status['status'] ?? null;
+        $errors    = $status['errors'] ?? [];
+
+        if ($state === 'failed' && $recipient) {
+            // Extract numeric error codes
+            $codes = array_map(fn($e) => is_array($e) ? ($e['code'] ?? null) : null, $errors);
+            $codes = array_filter($codes);
+
+            Log::warning('WhatsApp delivery failed', [
+                'recipient' => $recipient,
+                'error_codes' => array_values($codes),
+                'errors' => $errors,
+            ]);
+
+            // 131026 = user hasn't messaged in last 24h (session window closed)
+            if (in_array(131026, $codes, true)) {
+                Log::warning('24h window closed for user', ['phone' => $recipient]);
+                Subscriber::where('phone_number', $recipient)
+                    ->update(['window_failed' => true]);
+            }
+        }
+    }
+
+    /**
      * Process an incoming message with smooth onboarding and menu system
      */
-    private function processIncomingMessage(string $phoneNumber, string $message): void
+    private function processIncomingMessage(string $phoneNumber, string $message, array $messageData = []): void
     {
         // Normalize phone number
         $cleanNumber = $this->normalizePhoneNumber($phoneNumber);

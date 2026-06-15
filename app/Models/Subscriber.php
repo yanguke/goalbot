@@ -31,6 +31,8 @@ class Subscriber extends Model
         'subscription_expires_at',
         'paid_at',
         'commentary_mode',
+        'last_message_in_at',
+        'window_failed',
     ];
 
     protected $casts = [
@@ -42,6 +44,8 @@ class Subscriber extends Model
         'demo_started_at' => 'datetime',
         'subscription_expires_at' => 'datetime',
         'paid_at' => 'datetime',
+        'last_message_in_at' => 'datetime',
+        'window_failed' => 'boolean',
     ];
 
     /**
