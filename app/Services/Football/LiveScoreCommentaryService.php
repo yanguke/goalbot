@@ -166,9 +166,11 @@ class LiveScoreCommentaryService
                 Log::warning('DB slug rejected - uses API-Football ID', ['fixture_id' => $matchId, 'slug' => $record->livescore_slug]);
             }
 
-            // Search both results and fixtures pages on LiveScore
+            // Search results, live, and fixtures pages on LiveScore
             $pages = [
                 "https://www.livescore.com/en/football/international/world-cup-2026/results/",
+                "https://www.livescore.com/en/football/",
+                "https://www.livescore.com/en/football/international/world-cup-2026/",
                 "https://www.livescore.com/en/football/international/world-cup-2026/fixtures/",
             ];
 
@@ -224,6 +226,20 @@ class LiveScoreCommentaryService
             Log::warning('LiveScore slug not found on any page', ['home' => $homeTeam, 'away' => $awayTeam, 'matchId' => $matchId]);
             return null;
         });
+    }
+
+    /**
+     * Manually register a correct LiveScore slug for a fixture.
+     * Call this when the auto-discovery fails.
+     */
+    public function registerSlug(int $fixtureId, string $homeTeam, string $awayTeam, string $slug): void
+    {
+        \App\Models\LiveScoreCommentaryUrl::updateOrCreate(
+            ['fixture_id' => $fixtureId],
+            ['home_team' => $homeTeam, 'away_team' => $awayTeam, 'livescore_slug' => $slug]
+        );
+        Cache::forget("livescore_slug_{$fixtureId}");
+        Log::info('LiveScore slug manually registered', ['fixture_id' => $fixtureId, 'slug' => $slug]);
     }
 
     /**
