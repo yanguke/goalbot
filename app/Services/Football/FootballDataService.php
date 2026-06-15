@@ -194,10 +194,16 @@ class FootballDataService
             $lines[] = "- {$date} | {$round} | {$home} vs {$away}{$score} | {$venue}, {$city} | Status: {$status}";
         }
 
-        // Append full live context for each live/today match
-        $liveMatches  = $this->getLiveMatches();
-        $todayMatches = $this->getMatchesForDate(now()->toDateString());
-        $merged = collect($todayMatches)->keyBy(fn($m) => $m['fixture']['id']);
+        // Append full live context for live, today, and recent matches (last 2 days)
+        $liveMatches      = $this->getLiveMatches();
+        $todayMatches     = $this->getMatchesForDate(now()->toDateString());
+        $yesterdayMatches = $this->getMatchesForDate(now()->subDay()->toDateString());
+        $twoDaysAgo       = $this->getMatchesForDate(now()->subDays(2)->toDateString());
+
+        $merged = collect($yesterdayMatches)
+            ->merge($twoDaysAgo)
+            ->merge($todayMatches)
+            ->keyBy(fn($m) => $m['fixture']['id']);
         foreach ($liveMatches as $lm) {
             $merged->put($lm['fixture']['id'], $lm);
         }
