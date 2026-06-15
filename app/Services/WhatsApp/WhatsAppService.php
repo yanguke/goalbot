@@ -1721,7 +1721,7 @@ class WhatsAppService
     protected function sendTodayResults(string $phone): bool
     {
         $football = app(\App\Services\Football\FootballDataService::class);
-        $matches = $football->getTodayResults();
+        $matches = $football->getMatchesForDate(now()->toDateString());
 
         if (empty($matches)) {
             $upcoming = $football->getUpcomingMatches(1);
