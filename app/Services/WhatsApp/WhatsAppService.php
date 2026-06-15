@@ -1793,10 +1793,14 @@ class WhatsAppService
                 default     => $status,
             };
 
+            // WhatsApp list row title max = 24 chars
+            $maxEach = 10;
+            $rowTitle = substr($home, 0, $maxEach) . ' v ' . substr($away, 0, $maxEach);
+
             $rows[] = [
                 'id'          => 'match_' . $m['fixture']['id'],
-                'title'       => substr($home, 0, 24) . ' v ' . substr($away, 0, 24),
-                'description' => "{$hg} – {$ag}  |  {$statusLabel}",
+                'title'       => $rowTitle,
+                'description' => "{$home} {$hg}–{$ag} {$away}  |  {$statusLabel}",
             ];
         }
 
