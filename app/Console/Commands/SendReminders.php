@@ -120,15 +120,38 @@ class SendReminders extends Command
                     : '';
                 $personalizedReminder = $urgencyPrefix . $base;
 
-                $whatsapp->sendReminderAlert(
-                    $subscriber->phone_number,
-                    $personalizedReminder,
-                    'World Cup 2026',
-                    $homeTeam,
-                    $awayTeam,
-                    $windowLabel,
-                    $venue
-                );
+                // Determine if user is outside the 24h session window
+                $outsideWindow = $subscriber->window_failed
+                    || is_null($subscriber->last_message_in_at)
+                    || $subscriber->last_message_in_at->lt(now()->subHours(24));
+
+                if ($outsideWindow) {
+                    // Use approved template to re-open the window
+                    // minutes label e.g. "15 minutes" -> "15" for {{4}}
+                    $minutesOnly = preg_replace('/[^0-9]/', '', $windowLabel) ?: $windowLabel;
+                    $sent = $whatsapp->sendTemplate(
+                        $subscriber->phone_number,
+                        'match_reminder_alert',
+                        ['FIFA World Cup 2026', $homeTeam, $awayTeam, $minutesOnly, $venue]
+                    );
+                    Log::info('Reminder via template (out-of-window)', [
+                        'phone'  => $subscriber->phone_number,
+                        'match'  => "{$homeTeam} vs {$awayTeam}",
+                        'window' => $windowLabel,
+                        'sent'   => $sent,
+                    ]);
+                } else {
+                    // User is in-window — send rich plain text
+                    $whatsapp->sendReminderAlert(
+                        $subscriber->phone_number,
+                        $personalizedReminder,
+                        'FIFA World Cup 2026',
+                        $homeTeam,
+                        $awayTeam,
+                        $windowLabel,
+                        $venue
+                    );
+                }
                 usleep(200000);
 
                 // Send prediction after brief delay
