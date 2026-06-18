@@ -294,6 +294,16 @@ class PollMatches extends Command
             }
         }
 
+        // Button pool for MBM commentary — pick 3 randomly each entry
+        $buttonPool = [
+            ['id' => "stats_{$matchId}",    'title' => '📊 Match Stats'],
+            ['id' => "lineups_{$matchId}",  'title' => '📋 Lineups'],
+            ['id' => "schedule",            'title' => '📅 All Matches'],
+            ['id' => "table",               'title' => '🏆 Standings'],
+            ['id' => "favorite",            'title' => '⭐ My Team'],
+            ['id' => "predict_{$matchId}",  'title' => '🔮 AI Prediction'],
+        ];
+
         // Send every entry to minute-by-minute subscribers
         foreach ($allEntries as $entry) {
             $mbmLockKey = 'mbm_sent_' . md5($matchId . $entry['time'] . $entry['text']);
@@ -303,10 +313,22 @@ class PollMatches extends Command
 
             $minute = $entry['time'];
             $text   = $entry['text'];
-            $msg    = "🕐 *{$minute}* — {$text}";
+
+            // Pick 3 random buttons from the pool
+            $keys    = array_rand($buttonPool, 3);
+            $buttons = array_map(fn($k) => [
+                'type'  => 'reply',
+                'reply' => ['id' => $buttonPool[$k]['id'], 'title' => $buttonPool[$k]['title']],
+            ], $keys);
 
             foreach ($mbmSubs as $sub) {
-                $whatsapp->sendAlert($sub->phone_number, $msg);
+                $whatsapp->sendInteractiveButtons(
+                    $sub->phone_number,
+                    "{$homeTeam} vs {$awayTeam}",
+                    "🕐 *{$minute}* — {$text}",
+                    "Tap for more or keep watching",
+                    array_values($buttons)
+                );
                 usleep(100000);
                 $sent++;
             }
