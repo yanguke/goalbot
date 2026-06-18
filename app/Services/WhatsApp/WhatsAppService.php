@@ -734,6 +734,24 @@ class WhatsAppService
                 return ['status' => 'favorite_prompt_sent'];
                 
             case 'commentary':
+            case 'mode_smart':
+            case 'mode_live':
+            case 'mode_mbm':
+                if ($buttonId === 'mode_smart') {
+                    $subscriber->update(['commentary_mode' => 'digest']);
+                    $this->sendText($subscriber->phone_number, "🎯 *Smart Alerts set!*\n\nYou'll get the big moments — goals, cards, key plays — without the noise.");
+                    return ['status' => 'mode_set'];
+                }
+                if ($buttonId === 'mode_live') {
+                    $subscriber->update(['commentary_mode' => 'live']);
+                    $this->sendText($subscriber->phone_number, "⚡ *Live Updates set!*\n\nEvery key play delivered instantly as it happens.");
+                    return ['status' => 'mode_set'];
+                }
+                if ($buttonId === 'mode_mbm') {
+                    $subscriber->update(['commentary_mode' => 'minute_by_minute']);
+                    $this->sendText($subscriber->phone_number, "🕐 *Minute by Minute set!*\n\nYou'll receive every single commentary entry during live matches. Expect a lot of messages! ⚽");
+                    return ['status' => 'mode_set'];
+                }
                 $this->sendCommentaryStylePrompt($subscriber->phone_number, $subscriber);
                 return ['status' => 'commentary_prompt_sent'];
                 
@@ -994,20 +1012,28 @@ class WhatsAppService
     protected function sendCommentaryStylePrompt(string $phone, Subscriber $subscriber): bool
     {
         $current = $subscriber->commentary_mode ?? 'digest';
+        $modeLabel = match($current) {
+            'live'             => '⚡ Live updates',
+            'minute_by_minute' => '🕐 Minute by minute',
+            default            => '🎯 Smart alerts',
+        };
         $status = $subscriber->notifications_enabled ? 'ON' : 'OFF';
-        
-        $message = "⚙️ *Your Alert Preferences*\n\n";
-        $message .= "� *Status:* {$status}\n";
-        $message .= "� *Style:* " . ucfirst($current) . "\n\n";
-        $message .= "*Choose your experience:*\n";
-        $message .= "🎯 *Smart alerts* - Big moments only (recommended)\n";
-        $message .= "⚡ *Live updates* - Every key play instantly\n\n";
-        $message .= "Perfect for staying ahead! 🏆\n\n";
-        $message .= "Reply: *smart* or *live*\n";
-        $message .= "Or: *pause* / *resume*\n";
-        $message .= "Type *menu* to go back";
-        
-        return $this->sendText($phone, $message);
+
+        $header = '⚙️ Alert Preferences';
+        $body   = "Status: {$status} | Current: {$modeLabel}\n\n"
+                . "🎯 *Smart* — big moments only\n"
+                . "⚡ *Live* — every key play\n"
+                . "🕐 *Minute by minute* — every commentary entry";
+        $footer = 'Choose your style 👇';
+
+        $buttons = [
+            ['type' => 'reply', 'reply' => ['id' => 'mode_smart', 'title' => '🎯 Smart Alerts']],
+            ['type' => 'reply', 'reply' => ['id' => 'mode_live',  'title' => '⚡ Live Updates']],
+            ['type' => 'reply', 'reply' => ['id' => 'mode_mbm',   'title' => '🕐 Minute by Min']],
+        ];
+
+        $result = $this->messageSender->sendInteractiveButtons($phone, $header, $body, $footer, $buttons);
+        return $result['success'] ?? false;
     }
     
     /**
@@ -1459,6 +1485,12 @@ class WhatsAppService
             $subscriber->update(['commentary_mode' => 'live']);
             $this->sendText($subscriber->phone_number, "⚡ *Live Updates Ready!*\n\nYou're all set for instant action! Never miss a goal or key moment again! ⚽\n\nType *menu* for more options");
             return ['status' => 'live_set'];
+        }
+
+        if (in_array($textLower, ['mbm', 'minute by minute', 'minute-by-minute'], true)) {
+            $subscriber->update(['commentary_mode' => 'minute_by_minute']);
+            $this->sendText($subscriber->phone_number, "🕐 *Minute by Minute Activated!*\n\nYou'll receive every single commentary entry during live matches. Brace yourself — it's a lot! ⚽\n\nType *menu* for more options");
+            return ['status' => 'mbm_set'];
         }
 
         // Handle notifications on/off

@@ -231,8 +231,10 @@ class PollMatches extends Command
                 $entryMin = (int)($m[1] ?? 0) + (int)($m[2] ?? 0);
                 // Lock everything up to AND including current elapsed minute
                 if ($entryMin <= $elapsed) {
-                    $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
+                    $lockKey    = 'c_sent_'   . md5($matchId . $entry['time'] . $entry['text']);
+                    $mbmLockKey = 'mbm_sent_' . md5($matchId . $entry['time'] . $entry['text']);
                     \Illuminate\Support\Facades\Cache::put($lockKey, true, now()->addHours(6));
+                    \Illuminate\Support\Facades\Cache::put($mbmLockKey, true, now()->addHours(6));
                 }
             }
             \Illuminate\Support\Facades\Cache::put($seededCacheKey, true, now()->addHours(6));
@@ -243,12 +245,15 @@ class PollMatches extends Command
         // Split subscribers by mode
         $liveSubs   = $subscribers->filter(fn($s) => ($s->commentary_mode ?? 'live') === 'live');
         $digestSubs = $subscribers->filter(fn($s) => ($s->commentary_mode ?? 'live') === 'digest');
+        $mbmSubs    = $subscribers->filter(fn($s) => ($s->commentary_mode ?? '') === 'minute_by_minute');
 
-        // Normal run — send only highlights not yet locked
-        $highlights = $commentary->getHighlights($lsSlug, 20);
-        $newEntries = [];
-        $sent       = 0;
+        // Normal run — highlights for live/digest, all entries for mbm
+        $highlights  = $commentary->getHighlights($lsSlug, 20);
+        $allEntries  = $mbmSubs->isNotEmpty() ? $commentary->getCommentary($lsSlug) : [];
+        $newEntries  = [];
+        $sent        = 0;
 
+        // Send highlights to live-mode subscribers
         foreach ($highlights as $entry) {
             $lockKey = 'c_sent_' . md5($matchId . $entry['time'] . $entry['text']);
 
@@ -260,7 +265,6 @@ class PollMatches extends Command
             $text   = $entry['text'];
             $msg    = "⚽ *{$minute}* — {$text}";
 
-            // Live mode: send each entry immediately
             foreach ($liveSubs as $sub) {
                 $whatsapp->sendAlert($sub->phone_number, $msg);
                 usleep(100000);
@@ -268,6 +272,27 @@ class PollMatches extends Command
             }
             if ($liveSubs->isNotEmpty()) {
                 $this->info("  Commentary sent: {$minute} — {$text}");
+            }
+        }
+
+        // Send every entry to minute-by-minute subscribers
+        foreach ($allEntries as $entry) {
+            $mbmLockKey = 'mbm_sent_' . md5($matchId . $entry['time'] . $entry['text']);
+
+            if (\Illuminate\Support\Facades\Cache::has($mbmLockKey)) continue;
+            \Illuminate\Support\Facades\Cache::put($mbmLockKey, true, now()->addHours(6));
+
+            $minute = $entry['time'];
+            $text   = $entry['text'];
+            $msg    = "🕐 *{$minute}* — {$text}";
+
+            foreach ($mbmSubs as $sub) {
+                $whatsapp->sendAlert($sub->phone_number, $msg);
+                usleep(100000);
+                $sent++;
+            }
+            if ($mbmSubs->isNotEmpty()) {
+                $this->info("  MBM sent: {$minute} — {$text}");
             }
         }
 
