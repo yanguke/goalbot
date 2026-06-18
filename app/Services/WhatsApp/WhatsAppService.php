@@ -665,22 +665,18 @@ class WhatsAppService
      */
     public function sendSmoothWelcome(string $phoneNumber): bool
     {
-        $welcome = "⚽ *Welcome to GoalBot!*\n\n";
-        $welcome .= "Hi! I'm GoalBot, your personal AI assistant for the World Cup, here to guide you through the entire tournament. 🤖\n\n";
-        $welcome .= "I'll keep you up to date and manage all the important information so you never miss a moment:\n";
-        $welcome .= "⚡ *Instant goal alerts* as they happen\n";
-        $welcome .= "🎯 *Key match moments* you don't want to miss\n";
-        $welcome .= "📱 *Smart updates* only when it matters\n";
-        $welcome .= "🏆 *Complete tournament coverage* from start to finish\n\n";
-        $welcome .= "Think of me as your personal football expert - always here when you need me!\n\n";
-        $welcome .= "*Let's get you set up - choose your experience:*\n";
-        $welcome .= "1️⃣ My favorite team\n";
-        $welcome .= "2️⃣ Alert preferences\n";
-        $welcome .= "3️⃣ Today's matches\n";
-        $welcome .= "4️⃣ More options\n\n";
-        $welcome .= "Ready to begin? Just pick a number 👇";
-        
-        return $this->sendText($phoneNumber, $welcome);
+        $header = '⚽ Welcome to GoalBot!';
+        $body   = "Your AI assistant for FIFA World Cup 2026.\n\n"
+                . "Get instant goal alerts, live scores & AI commentary — all on WhatsApp.";
+        $footer = 'What would you like to do? 👇';
+
+        $buttons = [
+            ['type' => 'reply', 'reply' => ['id' => 'schedule', 'title' => "📅 Today's Matches"]],
+            ['type' => 'reply', 'reply' => ['id' => 'table',    'title' => '🏆 Group Standings']],
+        ];
+
+        $result = $this->sendButtonsFor($phoneNumber, $header, $body, $footer, $buttons);
+        return $result['success'] ?? false;
     }
     
     /**
