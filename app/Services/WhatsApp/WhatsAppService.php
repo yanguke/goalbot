@@ -707,9 +707,18 @@ class WhatsAppService
         $phoneNumber = $message['from'];
         $subscriber = $this->verifyUser($phoneNumber);
 
-        // New subscriber — send welcome menu and stop; don't process their first message
+        // New subscriber — send welcome and stop; don't process their first message
         if (!empty($subscriber->_isNew)) {
-            $this->sendMainMenu($phoneNumber);
+            $sent = $this->sendMainMenu($phoneNumber);
+            if (!$sent) {
+                // Interactive failed (no prior window) — fall back to plain text
+                $this->sendText($phoneNumber,
+                    "⚽ *Welcome to GoalBot!*\n\n"
+                    . "Your AI football assistant for FIFA World Cup 2026.\n\n"
+                    . "Get live scores, goal alerts & AI predictions — all on WhatsApp.\n\n"
+                    . "Reply *menu* to get started 👇"
+                );
+            }
             return ['status' => 'welcome_sent'];
         }
 
