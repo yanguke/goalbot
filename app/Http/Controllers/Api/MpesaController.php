@@ -148,10 +148,10 @@ class MpesaController extends Controller
             'demo_mode'             => false,
             'subscription_type'     => $isFull ? 'full_tournament' : 'per_match',
             'paid_at'               => now(),
-            // Day pass expires at midnight EAT; full tournament never expires
+            // Day pass expires 24 hours from payment; full tournament never expires
             'subscription_expires_at' => $isFull
                 ? null
-                : now()->setTimezone('Africa/Nairobi')->endOfDay()->utc(),
+                : now()->addHours(24),
         ];
 
         if (!$subscriber) {
