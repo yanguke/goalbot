@@ -77,6 +77,24 @@ class Subscriber extends Model
     }
 
     /**
+     * per_match subscribers whose pass has expired — should receive a renewal nudge.
+     */
+    public function scopeExpiredPerMatch($query, string $homeTeam, string $awayTeam)
+    {
+        return $query->where(function ($q) use ($homeTeam, $awayTeam) {
+            $q->where('favorite_team', $homeTeam)
+              ->orWhere('favorite_team', $awayTeam)
+              ->orWhere('notify_all_matches', true);
+        })
+        ->where('notifications_enabled', true)
+        ->where('subscription_type', 'per_match')
+        ->where(function ($q) {
+            $q->whereNull('subscription_expires_at')
+              ->orWhere('subscription_expires_at', '<=', now());
+        });
+    }
+
+    /**
      * Subscribers who want alerts for this match AND have a valid paid subscription.
      */
     public function scopeInterestedInMatch($query, string $homeTeam, string $awayTeam)

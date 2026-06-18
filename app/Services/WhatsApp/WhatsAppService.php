@@ -726,6 +726,44 @@ class WhatsAppService
             && $subscriber->isPaid();
     }
 
+    protected function gateOrPrompt(Subscriber $subscriber): bool
+    {
+        // Expired per_match — send renewal nudge
+        if ($subscriber->subscription_type === 'per_match' && !$subscriber->isPaid()) {
+            $this->sendRenewalPrompt($subscriber);
+            return false;
+        }
+        // Never subscribed / free tier — send fresh subscribe prompt
+        $this->subscribeUser($subscriber);
+        return false;
+    }
+
+    protected function sendRenewalPrompt(Subscriber $subscriber): bool
+    {
+        $cleanNumber = preg_replace('/[^0-9]/', '', $subscriber->phone_number);
+        $isKenyan    = str_starts_with($cleanNumber, '254');
+
+        $header = '🔔 Your Pass Has Expired';
+        $body   = "Your GoalBot match pass has expired and you're missing live alerts!\n\n"
+                . "Renew now to get back:\n"
+                . "• Instant goal & event alerts\n"
+                . "• AI commentary & half-time updates\n\n"
+                . ($isKenyan
+                    ? "💰 *KES 49* for today, or *KES 1,999* for the full tournament"
+                    : "💰 *\$0.99* for today, or *\$9.99* for the full tournament");
+        $footer = 'Tap to renew via M-Pesa 👇';
+
+        $buttons = [
+            ['type' => 'reply', 'reply' => ['id' => 'pay_per_match', 'title' => $isKenyan ? 'KES 49 - Today'   : '$0.99 - Today']],
+            ['type' => 'reply', 'reply' => ['id' => 'pay_full',      'title' => $isKenyan ? 'KES 1999 - Full'  : '$9.99 - Full']],
+        ];
+
+        $result = $this->messageSender->sendInteractiveButtons(
+            $subscriber->phone_number, $header, $body, $footer, $buttons
+        );
+        return $result['success'] ?? false;
+    }
+
     protected function handleButtonClick(Subscriber $subscriber, string $buttonId): array
     {
         switch ($buttonId) {
@@ -765,7 +803,7 @@ class WhatsAppService
                 
             case 'lineups':
                 if (!$this->isPremium($subscriber)) {
-                    $this->subscribeUser($subscriber);
+                    $this->gateOrPrompt($subscriber);
                     return ['status' => 'paywall_sent'];
                 }
                 $this->sendLineups($subscriber->phone_number);
@@ -773,7 +811,7 @@ class WhatsAppService
 
             case 'stats':
                 if (!$this->isPremium($subscriber)) {
-                    $this->subscribeUser($subscriber);
+                    $this->gateOrPrompt($subscriber);
                     return ['status' => 'paywall_sent'];
                 }
                 $this->sendLiveStats($subscriber->phone_number);
@@ -834,14 +872,14 @@ class WhatsAppService
                         switch ($action) {
                             case 'lineups':
                                 if (!$this->isPremium($subscriber)) {
-                                    $this->subscribeUser($subscriber);
+                                    $this->gateOrPrompt($subscriber);
                                     return ['status' => 'paywall_sent'];
                                 }
                                 $this->sendLineups($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'lineups_sent'];
                             case 'stats':
                                 if (!$this->isPremium($subscriber)) {
-                                    $this->subscribeUser($subscriber);
+                                    $this->gateOrPrompt($subscriber);
                                     return ['status' => 'paywall_sent'];
                                 }
                                 $this->sendLiveStats($subscriber->phone_number, $fixtureId);
@@ -851,7 +889,7 @@ class WhatsAppService
                                 return ['status' => 'alert_prompt_sent'];
                             case 'commentary':
                                 if (!$this->isPremium($subscriber)) {
-                                    $this->subscribeUser($subscriber);
+                                    $this->gateOrPrompt($subscriber);
                                     return ['status' => 'paywall_sent'];
                                 }
                                 $this->sendMatchCommentary($subscriber->phone_number, $fixtureId);
@@ -1577,7 +1615,7 @@ class WhatsAppService
 
         if (in_array($textLower, ['lineups', 'lineup', 'starting 11', 'xi'], true)) {
             if (!$this->isPremium($subscriber)) {
-                $this->subscribeUser($subscriber);
+                $this->gateOrPrompt($subscriber);
                 return ['status' => 'paywall_sent'];
             }
             $this->sendLineups($subscriber->phone_number);
@@ -1586,7 +1624,7 @@ class WhatsAppService
 
         if (in_array($textLower, ['stats', 'statistics', 'live stats'], true)) {
             if (!$this->isPremium($subscriber)) {
-                $this->subscribeUser($subscriber);
+                $this->gateOrPrompt($subscriber);
                 return ['status' => 'paywall_sent'];
             }
             $this->sendLiveStats($subscriber->phone_number);
@@ -1595,7 +1633,7 @@ class WhatsAppService
 
         if (in_array($textLower, ['subs', 'substitutions', 'changes'], true)) {
             if (!$this->isPremium($subscriber)) {
-                $this->subscribeUser($subscriber);
+                $this->gateOrPrompt($subscriber);
                 return ['status' => 'paywall_sent'];
             }
             $this->sendSubstitutions($subscriber->phone_number);
@@ -1604,7 +1642,7 @@ class WhatsAppService
 
         // Route everything else to Claude AI — premium only
         if (!$this->isPremium($subscriber)) {
-            $this->subscribeUser($subscriber);
+            $this->gateOrPrompt($subscriber);
             return ['status' => 'paywall_sent'];
         }
 

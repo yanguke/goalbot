@@ -93,6 +93,25 @@ class PollMatches extends Command
         
         $this->info("Processing: {$homeTeam} vs {$awayTeam} (Status: {$status})");
 
+        // Send renewal nudge once per match to expired per_match subscribers
+        if (in_array($status, ['1H', '2H'], true)) {
+            $renewalKey = "renewal_nudge_{$matchId}";
+            if (!\Illuminate\Support\Facades\Cache::has($renewalKey)) {
+                \Illuminate\Support\Facades\Cache::put($renewalKey, true, now()->addHours(12));
+                $expiredSubs = \App\Models\Subscriber::expiredPerMatch($homeTeam, $awayTeam)->get();
+                foreach ($expiredSubs as $sub) {
+                    $whatsapp->sendText(
+                        $sub->phone_number,
+                        "🔔 *{$homeTeam} vs {$awayTeam} is LIVE!*\n\nYour match pass has expired — renew to get live goal alerts & AI commentary.\n\nReply *subscribe* to renew now 👇"
+                    );
+                    usleep(200000);
+                }
+                if ($expiredSubs->isNotEmpty()) {
+                    $this->info("  Sent renewal nudge to {$expiredSubs->count()} expired subscriber(s)");
+                }
+            }
+        }
+
         // Send kickoff notification the first time we see 1H — deduped via notifications table
         if ($status === '1H') {
             $subscribers = Subscriber::interestedInMatch($homeTeam, $awayTeam)->get();
