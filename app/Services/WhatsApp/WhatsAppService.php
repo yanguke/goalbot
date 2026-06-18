@@ -75,7 +75,7 @@ class WhatsAppService
                 'notify_all_matches' => true,
                 'demo_mode' => false,
                 'subscription_type' => 'free',
-                'commentary_mode' => 'digest',
+                'commentary_mode' => 'minute_by_minute',
             ]);
 
             Log::info('New subscriber created', ['phone' => $phoneNumber]);
@@ -1065,7 +1065,7 @@ class WhatsAppService
      */
     protected function sendCommentaryStylePrompt(string $phone, Subscriber $subscriber): bool
     {
-        $current = $subscriber->commentary_mode ?? 'digest';
+        $current = $subscriber->commentary_mode ?? 'minute_by_minute';
         $modeLabel = match($current) {
             'live'             => '⚡ Live updates',
             'minute_by_minute' => '🕐 Minute by minute',
@@ -1719,7 +1719,7 @@ class WhatsAppService
     protected function sendAccountStatus(Subscriber $subscriber): bool
     {
         $status = $subscriber->notifications_enabled ? 'ON' : 'OFF';
-        $style = ucfirst($subscriber->commentary_mode ?? 'digest');
+        $style = ucfirst($subscriber->commentary_mode ?? 'minute_by_minute');
         $team = $subscriber->favorite_team ?? 'All teams';
         $type = $subscriber->subscription_type ?? 'full_tournament';
         

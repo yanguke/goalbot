@@ -18,10 +18,12 @@ return [
     'admin_key' => env('ADMIN_KEY'),
 
     /*
-     * When true, all users get free access — paywall is bypassed.
-     * Toggle via FREE_TRIAL=true in .env
+     * When true AND current time is before FREE_TRIAL_UNTIL, all users get free access.
+     * Set FREE_TRIAL=true and FREE_TRIAL_UNTIL=2026-06-19T22:00:00+03:00 in .env
      */
-    'free_trial' => env('FREE_TRIAL', false),
+    'free_trial' => env('FREE_TRIAL', false) && (
+        !env('FREE_TRIAL_UNTIL') || now()->lt(\Carbon\Carbon::parse(env('FREE_TRIAL_UNTIL')))
+    ),
 
     /*
     |--------------------------------------------------------------------------
