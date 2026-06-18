@@ -720,6 +720,12 @@ class WhatsAppService
     /**
      * Handle button clicks
      */
+    protected function isPremium(Subscriber $subscriber): bool
+    {
+        return in_array($subscriber->subscription_type ?? '', ['full_tournament', 'per_match'], true)
+            && $subscriber->isPaid();
+    }
+
     protected function handleButtonClick(Subscriber $subscriber, string $buttonId): array
     {
         switch ($buttonId) {
@@ -740,10 +746,18 @@ class WhatsAppService
                 return ['status' => 'table_sent'];
                 
             case 'lineups':
+                if (!$this->isPremium($subscriber)) {
+                    $this->subscribeUser($subscriber);
+                    return ['status' => 'paywall_sent'];
+                }
                 $this->sendLineups($subscriber->phone_number);
                 return ['status' => 'lineups_sent'];
-                
+
             case 'stats':
+                if (!$this->isPremium($subscriber)) {
+                    $this->subscribeUser($subscriber);
+                    return ['status' => 'paywall_sent'];
+                }
                 $this->sendLiveStats($subscriber->phone_number);
                 return ['status' => 'stats_sent'];
                 
@@ -801,15 +815,27 @@ class WhatsAppService
                         
                         switch ($action) {
                             case 'lineups':
+                                if (!$this->isPremium($subscriber)) {
+                                    $this->subscribeUser($subscriber);
+                                    return ['status' => 'paywall_sent'];
+                                }
                                 $this->sendLineups($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'lineups_sent'];
                             case 'stats':
+                                if (!$this->isPremium($subscriber)) {
+                                    $this->subscribeUser($subscriber);
+                                    return ['status' => 'paywall_sent'];
+                                }
                                 $this->sendLiveStats($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'stats_sent'];
                             case 'alerts':
                                 $this->sendMatchAlertPrompt($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'alert_prompt_sent'];
                             case 'commentary':
+                                if (!$this->isPremium($subscriber)) {
+                                    $this->subscribeUser($subscriber);
+                                    return ['status' => 'paywall_sent'];
+                                }
                                 $this->sendMatchCommentary($subscriber->phone_number, $fixtureId);
                                 return ['status' => 'commentary_sent'];
                         }
@@ -1518,21 +1544,38 @@ class WhatsAppService
         }
 
         if (in_array($textLower, ['lineups', 'lineup', 'starting 11', 'xi'], true)) {
+            if (!$this->isPremium($subscriber)) {
+                $this->subscribeUser($subscriber);
+                return ['status' => 'paywall_sent'];
+            }
             $this->sendLineups($subscriber->phone_number);
             return ['status' => 'lineups_sent'];
         }
 
         if (in_array($textLower, ['stats', 'statistics', 'live stats'], true)) {
+            if (!$this->isPremium($subscriber)) {
+                $this->subscribeUser($subscriber);
+                return ['status' => 'paywall_sent'];
+            }
             $this->sendLiveStats($subscriber->phone_number);
             return ['status' => 'stats_sent'];
         }
 
         if (in_array($textLower, ['subs', 'substitutions', 'changes'], true)) {
+            if (!$this->isPremium($subscriber)) {
+                $this->subscribeUser($subscriber);
+                return ['status' => 'paywall_sent'];
+            }
             $this->sendSubstitutions($subscriber->phone_number);
             return ['status' => 'subs_sent'];
         }
 
-        // Route everything else to Claude AI with full RAG context
+        // Route everything else to Claude AI — premium only
+        if (!$this->isPremium($subscriber)) {
+            $this->subscribeUser($subscriber);
+            return ['status' => 'paywall_sent'];
+        }
+
         return $this->handleAIQuestion($subscriber, $text);
     }
 
