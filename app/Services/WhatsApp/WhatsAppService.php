@@ -847,20 +847,28 @@ class WhatsAppService
                 return ['status' => 'subscribe_shown'];
                 
             case 'pay_per_match':
-                $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
-                return ['status' => 'already_paid'];
-                
+                if ($this->isPremium($subscriber)) {
+                    $this->sendText($subscriber->phone_number, "You already have an active subscription. Type *menu* to continue.");
+                    return ['status' => 'already_paid'];
+                }
+                $this->initiateStkPush($subscriber->phone_number, 49, 'per_match');
+                return ['status' => 'payment_initiated'];
+
             case 'pay_full':
-                $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
-                return ['status' => 'already_paid'];
-                
+                if ($this->isPremium($subscriber)) {
+                    $this->sendText($subscriber->phone_number, "You already have an active subscription. Type *menu* to continue.");
+                    return ['status' => 'already_paid'];
+                }
+                $this->initiateStkPush($subscriber->phone_number, 1999, 'full_tournament');
+                return ['status' => 'payment_initiated'];
+
             case 'pricing':
-                $this->sendText($subscriber->phone_number, "🎉 Good news! You have full tournament access at no cost.\n\nType *menu* to customize your experience.");
-                return ['status' => 'free_access'];
-                
+                $this->subscribeUser($subscriber);
+                return ['status' => 'pricing_shown'];
+
             case 'pay':
-                $this->sendText($subscriber->phone_number, "✅ You already have full tournament access!\n\nNo payment needed. Type *menu* to see options.");
-                return ['status' => 'already_paid'];
+                $this->subscribeUser($subscriber);
+                return ['status' => 'subscribe_shown'];
                 
             default:
                 // Handle match-specific buttons (match_12345)
@@ -1592,13 +1600,17 @@ class WhatsAppService
         }
 
         if (in_array($textLower, ['subscribe', 'opt in', 'join'], true)) {
-            $this->sendText($subscriber->phone_number, "✅ You're already subscribed with full tournament access!\n\nType *menu* to customize your experience.");
-            return ['status' => 'already_subscribed'];
+            if ($this->isPremium($subscriber)) {
+                $this->sendText($subscriber->phone_number, "You already have an active subscription. Type *menu* to continue.");
+                return ['status' => 'already_subscribed'];
+            }
+            $this->subscribeUser($subscriber);
+            return ['status' => 'subscribe_shown'];
         }
 
         if (in_array($textLower, ['pricing', 'price'], true)) {
-            $this->sendText($subscriber->phone_number, "🎉 Good news! You have full tournament access at no cost.\n\nType *menu* to customize your experience.");
-            return ['status' => 'free_access'];
+            $this->subscribeUser($subscriber);
+            return ['status' => 'pricing_shown'];
         }
 
         if (in_array($textLower, ['table', 'standings', 'groups'], true)) {
