@@ -56,7 +56,7 @@ class Subscriber extends Model
     public function isPaid(): bool
     {
         if ($this->subscription_type === 'full_tournament') {
-            return true;
+            return !empty($this->paid_at);
         }
 
         if ($this->subscription_type === 'per_match') {

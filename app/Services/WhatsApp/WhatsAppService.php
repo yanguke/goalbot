@@ -74,7 +74,7 @@ class WhatsAppService
                 'notifications_enabled' => true,
                 'notify_all_matches' => true,
                 'demo_mode' => false,
-                'subscription_type' => 'full_tournament',
+                'subscription_type' => 'free',
                 'commentary_mode' => 'digest',
             ]);
 
