@@ -90,47 +90,17 @@ class WhatsAppService
      */
     public function sendMainMenu(string $phoneNumber): bool
     {
-        // Build a live score hook from today's matches
-        $liveHook = $this->buildLiveScoreHook();
-
-        $header = "⚽ GoalBot - World Cup 2026";
-        $body = "Your AI football assistant: live scores, alerts & predictions on WhatsApp.\n\n"
-              . $liveHook
-              . "\n\nAsk me anything or tap below 👇";
-        $footer = "Type any question or pick an option";
+        $header  = "GoalBot - World Cup 2026";
+        $body    = "Live scores, goal alerts and AI predictions for every match.\n\nWhat would you like?";
+        $footer  = "Tap a button or type a question";
 
         $buttons = [
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'schedule',
-                    'title' => '📅 Today\'s Matches'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'table',
-                    'title' => '🏆 Group Standings'
-                ]
-            ],
-            [
-                'type' => 'reply',
-                'reply' => [
-                    'id' => 'favorite',
-                    'title' => '⭐ My Team'
-                ]
-            ]
+            ['type' => 'reply', 'reply' => ['id' => 'schedule', 'title' => "Today's Matches"]],
+            ['type' => 'reply', 'reply' => ['id' => 'table',    'title' => 'Group Standings']],
+            ['type' => 'reply', 'reply' => ['id' => 'favorite', 'title' => 'My Team']],
         ];
 
-        $result = $this->sendButtonsFor(
-            $phoneNumber,
-            $header,
-            $body,
-            $footer,
-            $buttons
-        );
-
+        $result = $this->sendButtonsFor($phoneNumber, $header, $body, $footer, $buttons);
         return $result['success'] ?? false;
     }
 
