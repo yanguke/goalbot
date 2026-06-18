@@ -160,18 +160,24 @@ class WhatsAppService
             $upcoming = collect($today)->filter(fn($m) => $m['fixture']['status']['short'] === 'NS')->values();
 
             $lines = [];
-            foreach ($played->take(2) as $m) {
-                $home = $m['teams']['home']['name'];
-                $away = $m['teams']['away']['name'];
-                $hg   = $m['goals']['home'];
-                $ag   = $m['goals']['away'];
-                $lines[] = "✅ {$home} {$hg}–{$ag} {$away}";
+            if ($played->isNotEmpty()) {
+                $lines[] = "*Today's Results:*";
+                foreach ($played->take(3) as $m) {
+                    $home = $m['teams']['home']['name'];
+                    $away = $m['teams']['away']['name'];
+                    $hg   = $m['goals']['home'];
+                    $ag   = $m['goals']['away'];
+                    $lines[] = "✅ {$home} {$hg}–{$ag} {$away}";
+                }
             }
-            foreach ($upcoming->take(2) as $m) {
-                $home = $m['teams']['home']['name'];
-                $away = $m['teams']['away']['name'];
-                $time = \Carbon\Carbon::parse($m['fixture']['date'])->timezone('Africa/Nairobi')->format('H:i');
-                $lines[] = "⏰ {$home} vs {$away} at {$time}";
+            if ($upcoming->isNotEmpty()) {
+                $lines[] = ($played->isNotEmpty() ? "\n" : "") . "*Upcoming Today:*";
+                foreach ($upcoming->take(3) as $m) {
+                    $home = $m['teams']['home']['name'];
+                    $away = $m['teams']['away']['name'];
+                    $time = \Carbon\Carbon::parse($m['fixture']['date'])->timezone('Africa/Nairobi')->format('H:i');
+                    $lines[] = "⏰ {$home} vs {$away} at {$time}";
+                }
             }
 
             if (!empty($lines)) {
