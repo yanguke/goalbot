@@ -93,8 +93,8 @@ class WhatsAppService
         // Build a live score hook from today's matches
         $liveHook = $this->buildLiveScoreHook();
 
-        $header = "⚽ GoalBot — World Cup 2026";
-        $body = "Your AI football assistant — live scores, alerts & predictions, all on WhatsApp.\n\n"
+        $header = "⚽ GoalBot - World Cup 2026";
+        $body = "Your AI football assistant: live scores, alerts & predictions on WhatsApp.\n\n"
               . $liveHook
               . "\n\nAsk me anything or tap below 👇";
         $footer = "Type any question or pick an option";
@@ -152,7 +152,7 @@ class WhatsAppService
                 $hg   = $m['goals']['home'] ?? 0;
                 $ag   = $m['goals']['away'] ?? 0;
                 $min  = $m['fixture']['status']['elapsed'] ?? '?';
-                return "🔴 *LIVE NOW:* {$home} {$hg}–{$ag} {$away} ({$min}')";
+                return "🔴 *LIVE NOW:* {$home} {$hg}-{$ag} {$away} ({$min}')";
             }
 
             // Show today's results or upcoming
@@ -167,7 +167,7 @@ class WhatsAppService
                     $away = $m['teams']['away']['name'];
                     $hg   = $m['goals']['home'];
                     $ag   = $m['goals']['away'];
-                    $lines[] = "✅ {$home} {$hg}–{$ag} {$away}";
+                    $lines[] = "✅ {$home} {$hg}-{$ag} {$away}";
                 }
             }
             if ($upcoming->isNotEmpty()) {
