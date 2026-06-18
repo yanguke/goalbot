@@ -123,7 +123,7 @@ class WhatsAppService
             ]
         ];
 
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phoneNumber,
             $header,
             $body,
@@ -293,7 +293,7 @@ class WhatsAppService
             ];
         }
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $subscriber->phone_number,
             $header,
             $body,
@@ -346,7 +346,7 @@ class WhatsAppService
             ]
         ];
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $subscriber->phone_number,
             $header,
             $body,
@@ -720,6 +720,35 @@ class WhatsAppService
     /**
      * Handle button clicks
      */
+    /**
+     * Wrapper around sendInteractiveButtons that injects a 💳 Subscribe button
+     * as the last option for any unpaid user (replaces last button if already at 3).
+     * Skips injection for subscribe/pay/renewal screens to avoid recursion.
+     */
+    protected function sendButtonsFor(string $phone, string $header, string $body, string $footer, array $buttons): array
+    {
+        $subscriber = Subscriber::where('phone_number', $phone)->first();
+
+        if ($subscriber && !$subscriber->isPaid()) {
+            $subscribeBtn = ['type' => 'reply', 'reply' => ['id' => 'subscribe', 'title' => '💳 Subscribe Now']];
+
+            // Don't inject on screens that are already about subscribing/paying
+            $skipIds = ['pay_per_match', 'pay_full', 'subscribe', 'keep_free'];
+            $existingIds = array_column(array_column($buttons, 'reply'), 'id');
+            $isPayScreen = !empty(array_intersect($existingIds, $skipIds));
+
+            if (!$isPayScreen) {
+                if (count($buttons) < 3) {
+                    $buttons[] = $subscribeBtn;
+                } else {
+                    $buttons[2] = $subscribeBtn;
+                }
+            }
+        }
+
+        return $this->messageSender->sendInteractiveButtons($phone, $header, $body, $footer, $buttons);
+    }
+
     protected function isPremium(Subscriber $subscriber): bool
     {
         return in_array($subscriber->subscription_type ?? '', ['full_tournament', 'per_match'], true)
@@ -758,7 +787,7 @@ class WhatsAppService
             ['type' => 'reply', 'reply' => ['id' => 'pay_full',      'title' => $isKenyan ? 'KES 1999 - Full'  : '$9.99 - Full']],
         ];
 
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $subscriber->phone_number, $header, $body, $footer, $buttons
         );
         return $result['success'] ?? false;
@@ -1070,7 +1099,7 @@ class WhatsAppService
             ['type' => 'reply', 'reply' => ['id' => 'mode_mbm',   'title' => '🕐 Minute by Min']],
         ];
 
-        $result = $this->messageSender->sendInteractiveButtons($phone, $header, $body, $footer, $buttons);
+        $result = $this->sendButtonsFor($phone, $header, $body, $footer, $buttons);
         return $result['success'] ?? false;
     }
     
@@ -1107,7 +1136,7 @@ class WhatsAppService
             ]
         ];
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phone, 
             $header, 
             $body, 
@@ -1151,7 +1180,7 @@ class WhatsAppService
             ]
         ];
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phone, 
             $header, 
             $body, 
@@ -1321,7 +1350,7 @@ class WhatsAppService
             ]
         ];
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phone, 
             $header, 
             $body, 
@@ -1388,7 +1417,7 @@ class WhatsAppService
         $body = "Explore more about this match!";
         $footer = "Tap any option to dive deeper 🔍";
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phone, 
             $header, 
             $body, 
@@ -1682,7 +1711,7 @@ class WhatsAppService
             ]
         ];
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phone, 
             $header, 
             $body, 
@@ -1820,7 +1849,7 @@ class WhatsAppService
             ]
         ];
         
-        $result = $this->messageSender->sendInteractiveButtons(
+        $result = $this->sendButtonsFor(
             $phone, 
             $header, 
             $body, 
@@ -1873,7 +1902,7 @@ class WhatsAppService
                     ]
                 ];
                 
-                $result = $this->messageSender->sendInteractiveButtons(
+                $result = $this->sendButtonsFor(
                     $phone, 
                     $header, 
                     $body, 
@@ -2011,7 +2040,7 @@ class WhatsAppService
         // After 2nd AI question, introduce subscription — user is clearly engaged
         $aiCount = \Illuminate\Support\Facades\Cache::increment("ai_count_{$subscriber->phone_number}");
         if ($aiCount === 2) {
-            $this->messageSender->sendInteractiveButtons(
+            $this->sendButtonsFor(
                 $subscriber->phone_number,
                 "🔔 Want Live Alerts?",
                 "You're clearly into this! Get goal alerts the moment they happen — every match, all tournament.",
