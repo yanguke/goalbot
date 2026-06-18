@@ -18,6 +18,12 @@ return [
     'admin_key' => env('ADMIN_KEY'),
 
     /*
+     * When true, all users get free access — paywall is bypassed.
+     * Toggle via FREE_TRIAL=true in .env
+     */
+    'free_trial' => env('FREE_TRIAL', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

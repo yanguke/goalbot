@@ -55,6 +55,8 @@ class Subscriber extends Model
      */
     public function isPaid(): bool
     {
+        if (config('app.free_trial')) return true;
+
         if ($this->subscription_type === 'full_tournament') {
             return !empty($this->paid_at);
         }
@@ -99,18 +101,22 @@ class Subscriber extends Model
      */
     public function scopeInterestedInMatch($query, string $homeTeam, string $awayTeam)
     {
-        return $query->where(function ($q) use ($homeTeam, $awayTeam) {
+        $query->where(function ($q) use ($homeTeam, $awayTeam) {
             $q->where('favorite_team', $homeTeam)
               ->orWhere('favorite_team', $awayTeam)
               ->orWhere('notify_all_matches', true);
-        })
-        ->where('notifications_enabled', true)
-        ->where(function ($q) {
-            $q->where('subscription_type', 'full_tournament')
-              ->orWhere(function ($q2) {
-                  $q2->where('subscription_type', 'per_match')
-                     ->where('subscription_expires_at', '>', now());
-              });
-        });
+        })->where('notifications_enabled', true);
+
+        if (!config('app.free_trial')) {
+            $query->where(function ($q) {
+                $q->where('subscription_type', 'full_tournament')
+                  ->orWhere(function ($q2) {
+                      $q2->where('subscription_type', 'per_match')
+                         ->where('subscription_expires_at', '>', now());
+                  });
+            });
+        }
+
+        return $query;
     }
 }
