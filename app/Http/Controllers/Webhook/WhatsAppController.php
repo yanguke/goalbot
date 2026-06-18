@@ -155,19 +155,7 @@ class WhatsAppController extends Controller
      */
     private function sendWelcomeMessage(string $phoneNumber): void
     {
-        $welcome = "⚽ *Welcome to GoalBot!*\n\n";
-        $welcome .= "Your World Cup 2026 companion is ready! I'll send you:\n";
-        $welcome .= "📋 *Match summaries* every 3 minutes\n";
-        $welcome .= "⚡ *Live goals* and key moments\n";
-        $welcome .= "🏆 *All tournament* matches covered\n\n";
-        $welcome .= "*Choose your preferences:*\n";
-        $welcome .= "1️⃣ My favorite team\n";
-        $welcome .= "2️⃣ Commentary style\n";
-        $welcome .= "3️⃣ Match schedule\n";
-        $welcome .= "4️⃣ Help & commands\n\n";
-        $welcome .= "Reply with a number or type *menu* anytime!";
-        
-        $this->whatsapp->sendMessage($phoneNumber, $welcome);
+        $this->whatsapp->sendMainMenu($phoneNumber);
     }
     
     /**

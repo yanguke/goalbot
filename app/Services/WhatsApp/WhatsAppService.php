@@ -78,10 +78,8 @@ class WhatsAppService
                 'commentary_mode' => 'digest',
             ]);
 
-            Log::info('New subscriber created (full tournament)', ['phone' => $phoneNumber]);
-
-            // Send smooth welcome message
-            $this->sendSmoothWelcome($phoneNumber);
+            Log::info('New subscriber created', ['phone' => $phoneNumber]);
+            $subscriber->_isNew = true;
         }
         
         return $subscriber;
@@ -95,9 +93,9 @@ class WhatsAppService
         // Build a live score hook from today's matches
         $liveHook = $this->buildLiveScoreHook();
 
-        $header = "⚽ FIFA World Cup 2026";
+        $header = "⚽ GoalBot — World Cup 2026";
         $body = $liveHook . "\n\nAsk me anything — scores, lineups, groups, predictions. Or tap below 👇";
-        $footer = "You can also just type any question!";
+        $footer = "Type any question or pick an option";
 
         $buttons = [
             [
@@ -700,7 +698,13 @@ class WhatsAppService
         
         $phoneNumber = $message['from'];
         $subscriber = $this->verifyUser($phoneNumber);
-        
+
+        // New subscriber — send welcome menu and stop; don't process their first message
+        if (!empty($subscriber->_isNew)) {
+            $this->sendMainMenu($phoneNumber);
+            return ['status' => 'welcome_sent'];
+        }
+
         // Handle by type
         if ($message['type'] === 'button' || $message['type'] === 'list') {
             return $this->handleButtonClick($subscriber, $message['id']);
