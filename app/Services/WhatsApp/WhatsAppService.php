@@ -94,7 +94,9 @@ class WhatsAppService
         $liveHook = $this->buildLiveScoreHook();
 
         $header = "⚽ GoalBot — World Cup 2026";
-        $body = $liveHook . "\n\nAsk me anything — scores, lineups, groups, predictions. Or tap below 👇";
+        $body = "Your AI football assistant — live scores, alerts & predictions, all on WhatsApp.\n\n"
+              . $liveHook
+              . "\n\nAsk me anything or tap below 👇";
         $footer = "Type any question or pick an option";
 
         $buttons = [
