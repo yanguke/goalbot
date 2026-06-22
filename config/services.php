@@ -69,6 +69,19 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
 
+    // Meta (Facebook) Ads + Conversions API
+    'meta' => [
+        'graph_url' => env('META_GRAPH_URL', 'https://graph.facebook.com/v21.0'),
+        // Conversions API (signup tracking)
+        'pixel_id' => env('META_PIXEL_ID'),
+        'capi_token' => env('META_CAPI_TOKEN'),
+        'test_event_code' => env('META_TEST_EVENT_CODE'),
+        // Marketing API (ads management)
+        'ad_account_id' => env('META_AD_ACCOUNT_ID'),
+        'business_id' => env('META_BUSINESS_ID'),
+        'system_user_token' => env('META_SYSTEM_USER_TOKEN'),
+    ],
+
     // M-Pesa (Kenya mobile payments)
     'mpesa' => [
         'environment' => env('MPESA_ENVIRONMENT', 'sandbox'),

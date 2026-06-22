@@ -12,6 +12,12 @@ class AdminSubscriberController extends Controller
 {
     private function auth(Request $request): void
     {
+        // Access is enforced by the 'admin' middleware (session login OR ?key=).
+        // This inline guard remains as defense-in-depth.
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            return;
+        }
+
         $expected = config('app.admin_key', env('ADMIN_KEY'));
         if (!$expected || $request->query('key') !== $expected) {
             abort(403, 'Forbidden');

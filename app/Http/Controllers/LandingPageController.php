@@ -65,9 +65,12 @@ class LandingPageController extends Controller
     {
         $visit = $this->recordVisit($request, 'cta_click');
 
-        // Store visit ID in a cookie for attribution (no token in the WA message)
+        // Embed the visit id as a ref token in the prefilled message so the
+        // WhatsApp webhook can stitch ad attribution (utm + fbclid) onto the
+        // subscriber. Browser cookies are not visible to the webhook, so this
+        // token is the bridge for the landing-page flow.
         $phone = config('services.whatsapp.phone_number', '254715333355');
-        $msg   = 'Goal';
+        $msg   = $visit ? "Goal r={$visit->id}" : 'Goal';
         $url   = "https://wa.me/{$phone}?text=" . urlencode($msg);
 
         $response = redirect()->away($url, 302);
@@ -98,6 +101,8 @@ class LandingPageController extends Controller
                 'utm_campaign' => $request->query('utm_campaign'),
                 'utm_term' => $request->query('utm_term'),
                 'utm_content' => $request->query('utm_content'),
+                'fbclid' => $request->query('fbclid'),
+                'fbp' => $request->cookie('_fbp'),
                 'event' => $event,
             ]);
         } catch (\Throwable $e) {

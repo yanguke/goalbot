@@ -27,6 +27,9 @@ class Subscriber extends Model
         'utm_content',
         'attribution_ip',
         'country',
+        'fbclid',
+        'fbp',
+        'meta_lead_sent_at',
         'subscription_type',
         'subscription_expires_at',
         'paid_at',
@@ -46,6 +49,7 @@ class Subscriber extends Model
         'paid_at' => 'datetime',
         'last_message_in_at' => 'datetime',
         'window_failed' => 'boolean',
+        'meta_lead_sent_at' => 'datetime',
     ];
 
     /**

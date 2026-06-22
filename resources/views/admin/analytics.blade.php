@@ -6,7 +6,13 @@
 <title>GoalBot Analytics</title>
 <style>
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #0b0f1a; color: #e4e7ef; padding: 2rem; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #0b0f1a; color: #e4e7ef; }
+    .topbar { background: #0f1623; border-bottom: 1px solid #1f2638; padding: 0.875rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .topbar h1 { margin: 0; font-size: 1.1rem; }
+    .topbar nav a { font-size: 0.85rem; color: #8892a8; margin-left: 1.25rem; text-decoration: none; }
+    .topbar nav a.active, .topbar nav a:hover { color: #e4e7ef; }
+    .btn-ghost { background: #1f2638; color: #e4e7ef; border: 1px solid #2b3450; border-radius: 8px; padding: 0.3rem 0.75rem; cursor: pointer; font-size: 0.8rem; }
+    .wrap { padding: 2rem; }
     h1 { margin: 0 0 0.25rem; }
     .muted { color: #8892a8; font-size: 0.875rem; }
     .grid { display: grid; gap: 1rem; }
@@ -25,6 +31,20 @@
 </style>
 </head>
 <body>
+<div class="topbar">
+    <h1>⚽ GoalBot Admin</h1>
+    <nav>
+        <a href="{{ route('admin.analytics', request('key') ? ['key' => request('key')] : []) }}" class="active">Analytics</a>
+        <a href="{{ route('admin.subscribers', request('key') ? ['key' => request('key')] : []) }}">Subscribers</a>
+        @auth
+        <form method="POST" action="{{ route('admin.logout') }}" style="display:inline;margin-left:1.25rem;">
+            @csrf
+            <button type="submit" class="btn-ghost">Log out</button>
+        </form>
+        @endauth
+    </nav>
+</div>
+<div class="wrap">
     <h1>📊 GoalBot Analytics</h1>
     <p class="muted">Since {{ $since->toDateString() }}</p>
 
@@ -76,6 +96,43 @@
     </div>
 
     <div class="card" style="margin-top: 1rem;">
+        <h3>📣 Meta Ads <span class="muted" style="font-weight:400;">— last 7 days</span></h3>
+        @if(! $ads['configured'])
+            <p class="muted">Not connected. Add <code>META_AD_ACCOUNT_ID</code> and <code>META_SYSTEM_USER_TOKEN</code> to <code>.env</code> to see campaign spend, leads and cost-per-lead here.</p>
+        @elseif(! empty($ads['error']))
+            <p class="muted">Meta API error: {{ $ads['error'] }}</p>
+        @else
+            @php $t = $ads['totals']; @endphp
+            <div class="grid kpis" style="margin: 0.5rem 0 1rem;">
+                <div class="card kpi"><div class="label">Spend</div><div class="value">{{ number_format($t['spend'], 0) }}</div></div>
+                <div class="card kpi"><div class="label">Impressions</div><div class="value">{{ number_format($t['impressions']) }}</div></div>
+                <div class="card kpi"><div class="label">Clicks</div><div class="value">{{ number_format($t['clicks']) }}</div></div>
+                <div class="card kpi"><div class="label">Leads</div><div class="value">{{ number_format($t['leads']) }}</div></div>
+                <div class="card kpi"><div class="label">Cost / Lead</div><div class="value">{{ $t['cost_per_lead'] !== null ? number_format($t['cost_per_lead'], 1) : '—' }}</div></div>
+            </div>
+            <table>
+                <thead><tr><th>Campaign</th><th>Spend</th><th>Impr.</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>Leads</th><th>Cost/Lead</th></tr></thead>
+                <tbody>
+                @forelse($ads['campaigns'] as $c)
+                    <tr>
+                        <td>{{ $c['name'] }}</td>
+                        <td>{{ number_format($c['spend'], 0) }}</td>
+                        <td>{{ number_format($c['impressions']) }}</td>
+                        <td>{{ number_format($c['clicks']) }}</td>
+                        <td>{{ round($c['ctr'], 2) }}%</td>
+                        <td>{{ number_format($c['cpc'], 2) }}</td>
+                        <td>{{ number_format($c['leads']) }}</td>
+                        <td>{{ $c['cost_per_lead'] !== null ? number_format($c['cost_per_lead'], 1) : '—' }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="8" class="muted">No campaign data for this period</td></tr>
+                @endforelse
+                </tbody>
+            </table>
+        @endif
+    </div>
+
+    <div class="card" style="margin-top: 1rem;">
         <h3>Last 14 Days</h3>
         <table>
             <thead><tr><th>Date</th><th>Views</th><th>Clicks</th><th>CTR</th></tr></thead>
@@ -94,5 +151,6 @@
             </tbody>
         </table>
     </div>
+</div>{{-- .wrap --}}
 </body>
 </html>

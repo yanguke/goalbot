@@ -120,8 +120,14 @@ tbody tr:hover td { background: #161d2e; }
 <div class="topbar">
     <h1>⚽ GoalBot Admin</h1>
     <nav>
-        <a href="/admin/analytics?key={{ request('key') }}">Analytics</a>
-        <a href="/admin/subscribers?key={{ request('key') }}" class="active">Subscribers</a>
+        <a href="{{ route('admin.analytics', request('key') ? ['key' => request('key')] : []) }}">Analytics</a>
+        <a href="{{ route('admin.subscribers', request('key') ? ['key' => request('key')] : []) }}" class="active">Subscribers</a>
+        @auth
+        <form method="POST" action="{{ route('admin.logout') }}" style="display:inline;margin-left:1.25rem;">
+            @csrf
+            <button type="submit" class="btn btn-ghost btn-sm">Log out</button>
+        </form>
+        @endauth
     </nav>
 </div>
 

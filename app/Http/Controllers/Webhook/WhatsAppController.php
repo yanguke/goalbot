@@ -130,6 +130,8 @@ class WhatsAppController extends Controller
                     'utm_content' => $visit->utm_content,
                     'attribution_ip' => $visit->ip,
                     'country' => $visit->country,
+                    'fbclid' => $visit->fbclid,
+                    'fbp' => $visit->fbp,
                 ]);
             }
         }
@@ -142,6 +144,13 @@ class WhatsAppController extends Controller
         
         // Handle new user onboarding
         if ($subscriber->wasRecentlyCreated) {
+            // Report the signup to Meta (Conversions API) for ad attribution.
+            try {
+                app(\App\Services\Meta\MetaCapiService::class)->reportSignup($subscriber->fresh());
+            } catch (\Throwable $e) {
+                Log::warning('Meta signup report failed', ['error' => $e->getMessage()]);
+            }
+
             $this->sendWelcomeMessage($cleanNumber);
             return;
         }
