@@ -6,8 +6,8 @@
     <meta name="theme-color" content="#0a1628">
 
     {{-- Primary SEO --}}
-    <title>GoalBot — Live World Cup 2026 Alerts on WhatsApp ⚽</title>
-    <meta name="description" content="Never miss a goal. Get instant World Cup 2026 alerts on WhatsApp — live scores, goals, red cards, AI commentary and match predictions. Subscribe from KES 49.">
+    <title>GoalBot — Your World Cup AI Insider on WhatsApp ⚽</title>
+    <meta name="description" content="The smartest way to follow World Cup 2026. Get AI commentary, match predictions, and the story behind every moment on WhatsApp. From KES 49/day.">
     <meta name="keywords" content="World Cup 2026, WhatsApp alerts, live scores, football notifications, GoalBot, Kenya, FIFA, soccer alerts, AI football">
     <meta name="author" content="GoalBot">
     <link rel="canonical" href="{{ url()->current() }}">
@@ -16,8 +16,8 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="GoalBot">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:title" content="Never miss a World Cup 2026 goal — live on your WhatsApp ⚽">
-    <meta property="og:description" content="AI-powered live alerts for every goal, red card & full-time score. Match predictions, instant updates, all on WhatsApp. From KES 49/day.">
+    <meta property="og:title" content="Your World Cup AI Insider — smarter way to follow the game ⚽">
+    <meta property="og:description" content="Get the story behind every World Cup moment. AI commentary, predictions, and insights delivered to your WhatsApp. From KES 49/day.">
     <meta property="og:image" content="{{ asset('og-image.png') }}">
     <meta property="og:image:secure_url" content="{{ asset('og-image.png') }}">
     <meta property="og:image:width" content="1200">
@@ -27,8 +27,8 @@
 
     {{-- Twitter / X --}}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Never miss a World Cup 2026 goal ⚽">
-    <meta name="twitter:description" content="Live goals, red cards & AI predictions delivered to your WhatsApp. From KES 49/day.">
+    <meta name="twitter:title" content="Your World Cup AI Insider ⚽">
+    <meta name="twitter:description" content="The smartest way to follow World Cup 2026. Get AI commentary, predictions, and the story behind every moment on WhatsApp. From KES 49/day.">
     <meta name="twitter:image" content="{{ asset('og-image.png') }}">
     <meta name="twitter:image:alt" content="GoalBot — Live World Cup 2026 alerts on WhatsApp">
 
@@ -424,8 +424,8 @@
         
         <section class="hero">
             <div class="hero-content">
-                <h1>Never miss a World Cup moment.</h1>
-                <p class="subtitle">Live goals, red cards & AI commentary — delivered straight to your <strong>WhatsApp</strong>. Tournament is live now. ⚽</p>
+                <h1>Your World Cup AI Insider.</h1>
+                <p class="subtitle">The smartest way to follow World Cup 2026 — get the story behind every goal, card, and match moment. Delivered to your <strong>WhatsApp</strong>. ⚽</p>
                 
                 {{-- Pricing temporarily commented out for testing --}}
                 {{-- 
