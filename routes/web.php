@@ -4,10 +4,12 @@ use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminSubscriberController;
 use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\LeadCaptureController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingPageController::class, 'index']);
 Route::get('/go', [LandingPageController::class, 'click']);
+Route::post('/lead-capture', [LeadCaptureController::class, 'store'])->name('lead.capture');
 
 // Admin authentication
 Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
