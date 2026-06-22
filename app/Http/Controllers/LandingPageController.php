@@ -63,23 +63,12 @@ class LandingPageController extends Controller
      */
     public function click(Request $request)
     {
-        $visit = $this->recordVisit($request, 'cta_click');
-
-        // Embed the visit id as a ref token in the prefilled message so the
-        // WhatsApp webhook can stitch ad attribution (utm + fbclid) onto the
-        // subscriber. Browser cookies are not visible to the webhook, so this
-        // token is the bridge for the landing-page flow.
+        // Direct WhatsApp redirect without tracking
         $phone = config('services.whatsapp.phone_number', '254715333355');
-        $msg   = $visit ? "Goal r={$visit->id}" : 'Goal';
+        $msg   = 'Goal';
         $url   = "https://wa.me/{$phone}?text=" . urlencode($msg);
 
-        $response = redirect()->away($url, 302);
-
-        if ($visit) {
-            $response->withCookie(cookie('_gb_vid', $visit->id, 60 * 24 * 7, '/', null, true, false));
-        }
-
-        return $response;
+        return redirect()->away($url, 302);
     }
 
     /**
