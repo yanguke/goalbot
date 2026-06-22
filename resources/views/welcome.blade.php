@@ -365,6 +365,8 @@
                 <h1>Never miss a World Cup moment.</h1>
                 <p class="subtitle">Live goals, red cards & AI commentary — delivered straight to your <strong>WhatsApp</strong>. Tournament is live now. ⚽</p>
                 
+                {{-- Pricing temporarily commented out for testing --}}
+                {{-- 
                 <div class="pricing">
                     <div class="price">{{ $pricing['per_match_label'] ?? '$0.99' }} <span>/ day</span></div>
                     <div style="color: rgba(255,255,255,0.6); font-size: 0.875rem;">or {{ $pricing['full_label'] ?? '$9.99' }} — full tournament 🏆</div>
@@ -372,6 +374,7 @@
                         <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #4ade80;">🇰🇪 Pay via M-Pesa</div>
                     @endif
                 </div>
+                --}}
                 
                 <a href="/go?{{ http_build_query(array_filter([
                     'utm_source' => request('utm_source'),
