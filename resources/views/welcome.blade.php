@@ -64,29 +64,6 @@
       document.currentScript.previousElementSibling.textContent =
         document.currentScript.previousElementSibling.textContent.replace('__SITE_URL__', '{{ $siteUrl }}');
     </script>
-    
-    <script>
-      // Update phone placeholder based on country selection
-      document.getElementById('country').addEventListener('change', function() {
-          const phoneInput = document.getElementById('phone_number');
-          const placeholders = {
-              'KE': '712 345 678',
-              'UG': '712 345 678', 
-              'TZ': '712 345 678',
-              'NG': '812 345 6789',
-              'ZA': '61 234 5678',
-              'GH': '20 123 4567',
-              'OTHER': 'Full number with country code'
-          };
-          
-          phoneInput.placeholder = placeholders[this.value] || 'Phone number';
-      });
-      
-      // Set initial placeholder if Kenya is pre-selected
-      if (document.getElementById('country').value === 'KE') {
-          document.getElementById('phone_number').placeholder = '712 345 678';
-      }
-    </script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -211,31 +188,6 @@
             display: flex;
             gap: 0.75rem;
             align-items: stretch;
-        }
-        
-        .country-select {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 1rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s;
-            outline: none;
-            min-width: 140px;
-            cursor: pointer;
-        }
-        
-        .country-select option {
-            background: #1a3a5c;
-            color: #fff;
-        }
-        
-        .country-select:focus {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: #25d366;
-            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
         }
         
         .phone-input {
@@ -489,21 +441,11 @@
                 <form id="leadForm" class="lead-form" method="POST" action="/lead-capture">
                     @csrf
                     <div class="phone-input-group">
-                        <select name="country" id="country" class="country-select" required>
-                            <option value="">Select country</option>
-                            <option value="KE" {{ $isKenya ? 'selected' : '' }}>🇰🇪 Kenya (+254)</option>
-                            <option value="UG">🇺🇬 Uganda (+256)</option>
-                            <option value="TZ">🇹🇿 Tanzania (+255)</option>
-                            <option value="NG">🇳🇬 Nigeria (+234)</option>
-                            <option value="ZA">🇿🇦 South Africa (+27)</option>
-                            <option value="GH">🇬🇭 Ghana (+233)</option>
-                            <option value="OTHER">🌍 Other</option>
-                        </select>
                         <input type="tel" 
                                name="phone_number" 
                                id="phone_number" 
-                               placeholder="Phone number" 
-                               pattern="[0-9]{9,15}" 
+                               placeholder="Enter your phone number" 
+                               pattern="[0-9]{10,15}" 
                                required 
                                class="phone-input">
                         <button type="submit" class="cta-btn">

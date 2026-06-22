@@ -11,12 +11,10 @@ class LeadCaptureController extends Controller
 {
     public function store(Request $request)
     {
-        // Validate the form
+        // Validate the phone number
         $validator = Validator::make($request->all(), [
-            'country' => ['required', 'string', 'in:KE,UG,TZ,NG,ZA,GH,OTHER'],
-            'phone_number' => ['required', 'string', 'regex:/^[0-9]{7,15}$/'],
+            'phone_number' => ['required', 'string', 'regex:/^[0-9]{10,15}$/'],
         ], [
-            'country.required' => 'Please select your country',
             'phone_number.required' => 'Please enter your phone number',
             'phone_number.regex' => 'Please enter a valid phone number',
         ]);
@@ -29,38 +27,16 @@ class LeadCaptureController extends Controller
 
         // Clean and format phone number
         $phone = preg_replace('/[^0-9]/', '', $request->phone_number);
-        $country = $request->country;
-
-        // Country code mapping
-        $countryCodes = [
-            'KE' => '254',
-            'UG' => '256', 
-            'TZ' => '255',
-            'NG' => '234',
-            'ZA' => '27',
-            'GH' => '233',
-        ];
-
-        // Format phone number based on selected country
-        if ($country === 'OTHER') {
-            // For "Other", assume user entered full number with country code
-            if (strlen($phone) < 10) {
-                return back()
-                    ->withErrors(['phone_number' => 'Please enter your full phone number with country code'])
-                    ->withInput();
-            }
-        } else {
-            // For specific countries, add country code if missing
-            $countryCode = $countryCodes[$country];
-            
-            // Remove leading zeros and add country code
-            $phone = ltrim($phone, '0');
-            
-            // If country code not already present, add it
-            if (!str_starts_with($phone, $countryCode)) {
-                $phone = $countryCode . $phone;
-            }
+        
+        // Add country code if missing (assume Kenya if 10 digits)
+        if (strlen($phone) === 10 && str_starts_with($phone, '0')) {
+            $phone = '254' . substr($phone, 1);
+        } elseif (strlen($phone) === 9 && !str_starts_with($phone, '254')) {
+            $phone = '254' . $phone;
         }
+
+        // Detect country (simplified - can be enhanced)
+        $country = str_starts_with($phone, '254') ? 'KE' : 'XX';
 
         // Create or update the lead
         $lead = Lead::updateOrCreate(
