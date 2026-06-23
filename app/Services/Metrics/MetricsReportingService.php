@@ -101,9 +101,10 @@ class MetricsReportingService
     {
         $hourStart = now()->startOfHour();
         $previousHour = now()->subHour()->startOfHour();
+        $gmtPlus3 = now()->timezone('Africa/Nairobi');
 
         return [
-            'hour' => now()->format('H:00'),
+            'hour' => $gmtPlus3->format('H:00') . ' GMT+3',
             'new_subscribers_hour' => Subscriber::where('created_at', '>=', $hourStart)->count(),
             'new_subscribers_prev_hour' => Subscriber::whereBetween('created_at', [$previousHour, $hourStart])->count(),
             'total_subscribers' => Subscriber::count(),
@@ -206,7 +207,7 @@ class MetricsReportingService
      */
     private function formatDailyMessage(array $metrics): string
     {
-        $message = "📊 **Daily Metrics Report - " . now()->format('M j, Y') . "**\n\n";
+        $message = "📊 **Daily Metrics Report - " . now()->timezone('Africa/Nairobi')->format('M j, Y') . " (GMT+3)**\n\n";
         
         $message .= "👥 **Growth**\n";
         $message .= "• New subscribers: {$metrics['new_subscribers']}\n";
@@ -238,7 +239,7 @@ class MetricsReportingService
      */
     private function formatWeeklyMessage(array $metrics): string
     {
-        $message = "📈 **Weekly Metrics Report - " . now()->format('M j, Y') . "**\n\n";
+        $message = "📈 **Weekly Metrics Report - " . now()->timezone('Africa/Nairobi')->format('M j, Y') . " (GMT+3)**\n\n";
         
         $message .= "👥 **Growth**\n";
         $growth = $metrics['new_subscribers_week'] - $metrics['new_subscribers_last_week'];
