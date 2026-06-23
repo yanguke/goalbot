@@ -5,19 +5,19 @@ namespace App\Services\Metrics;
 use App\Models\Subscriber;
 use App\Models\LandingVisit;
 use App\Models\Lead;
-use App\Services\WhatsApp\MessageSender;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MetricsReportingService
 {
-    private MessageSender $messageSender;
-    private string $monitoringChatId = '120363426674587893@g.us';
+    private string $apiUrl = 'https://niaje.helaplus.com/client/sendMessage/DCBA';
+    private string $apiKey = 'helaplus';
+    private string $chatId = '120363426674587893@g.us';
 
-    public function __construct(MessageSender $messageSender)
+    public function __construct()
     {
-        $this->messageSender = $messageSender;
+        // Using provided API key
     }
 
     /**
@@ -269,33 +269,41 @@ class MetricsReportingService
     }
 
     /**
-     * Send message via existing WhatsApp MessageSender
+     * Send message via Helaplus API
      */
     private function sendMessage(string $message): bool
     {
         try {
-            // Send to monitoring group using existing WhatsApp system
-            $success = $this->messageSender->sendText(
-                $this->monitoringChatId,
-                $message
-            );
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'x-api-key' => $this->apiKey,
+                ])
+                ->post($this->apiUrl, [
+                    'chatId' => $this->chatId,
+                    'content' => $message,
+                    'contentType' => 'string'
+                ]);
 
-            if ($success) {
-                Log::info('Metrics report sent to monitoring group', [
+            if ($response->successful()) {
+                Log::info('Metrics report sent to monitoring group via Helaplus', [
                     'message_length' => strlen($message),
-                    'chat_id' => $this->monitoringChatId
+                    'chat_id' => $this->chatId,
+                    'status' => $response->status()
                 ]);
                 return true;
             } else {
-                Log::error('Failed to send metrics report', [
-                    'chat_id' => $this->monitoringChatId
+                Log::error('Failed to send metrics report via Helaplus', [
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                    'chat_id' => $this->chatId
                 ]);
                 return false;
             }
         } catch (\Exception $e) {
-            Log::error('Exception sending metrics report', [
+            Log::error('Exception sending metrics report via Helaplus', [
                 'error' => $e->getMessage(),
-                'chat_id' => $this->monitoringChatId
+                'chat_id' => $this->chatId
             ]);
             return false;
         }
