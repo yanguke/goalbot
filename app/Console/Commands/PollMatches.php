@@ -285,7 +285,20 @@ class PollMatches extends Command
             $msg    = "⚽ *{$minute}* — {$text}";
 
             foreach ($liveSubs as $sub) {
-                $whatsapp->sendAlert($sub->phone_number, $msg);
+                // Add frequency control buttons to live messages
+                $liveButtons = [
+                    ['type' => 'reply', 'reply' => ['id' => 'mode_smart', 'title' => '🎯 Smart Alerts']],
+                    ['type' => 'reply', 'reply' => ['id' => 'mode_live', 'title' => '⚡ Live Updates']],
+                    ['type' => 'reply', 'reply' => ['id' => 'mode_mbm', 'title' => '🕐 Minute by Minute']],
+                ];
+                
+                $whatsapp->sendInteractiveButtons(
+                    $sub->phone_number,
+                    "⚽ Live Update",
+                    $msg,
+                    "Choose update frequency:",
+                    $liveButtons
+                );
                 usleep(100000);
                 $sent++;
             }
@@ -304,6 +317,13 @@ class PollMatches extends Command
             ['id' => "predict_{$matchId}",  'title' => '🔮 AI Prediction'],
         ];
 
+        // Frequency control buttons (always include)
+        $frequencyButtons = [
+            ['id' => "mode_smart",          'title' => '🎯 Smart Alerts'],
+            ['id' => "mode_live",           'title' => '⚡ Live Updates'],
+            ['id' => "mode_mbm",            'title' => '🕐 Minute by Minute'],
+        ];
+
         // Send every entry to minute-by-minute subscribers
         foreach ($allEntries as $entry) {
             $mbmLockKey = 'mbm_sent_' . md5($matchId . $entry['time'] . $entry['text']);
@@ -314,12 +334,20 @@ class PollMatches extends Command
             $minute = $entry['time'];
             $text   = $entry['text'];
 
-            // Pick 3 random buttons from the pool
-            $keys    = array_rand($buttonPool, 3);
-            $buttons = array_map(fn($k) => [
-                'type'  => 'reply',
-                'reply' => ['id' => $buttonPool[$k]['id'], 'title' => $buttonPool[$k]['title']],
-            ], $keys);
+            // Pick 2 random buttons from pool + 1 frequency button
+            $poolKeys    = array_rand($buttonPool, 2);
+            $freqKey     = array_rand($frequencyButtons, 1);
+            
+            $buttons = array_merge(
+                array_map(fn($k) => [
+                    'type'  => 'reply',
+                    'reply' => ['id' => $buttonPool[$k]['id'], 'title' => $buttonPool[$k]['title']],
+                ], $poolKeys),
+                [[
+                    'type'  => 'reply',
+                    'reply' => ['id' => $frequencyButtons[$freqKey]['id'], 'title' => $frequencyButtons[$freqKey]['title']],
+                ]]
+            );
 
             foreach ($mbmSubs as $sub) {
                 $whatsapp->sendInteractiveButtons(
@@ -364,7 +392,20 @@ class PollMatches extends Command
                 $digestMsg = $header . $narrative;
 
                 foreach ($digestSubs as $sub) {
-                    $whatsapp->sendAlert($sub->phone_number, $digestMsg);
+                    // Add frequency control buttons to digest messages
+                    $digestButtons = [
+                        ['type' => 'reply', 'reply' => ['id' => 'mode_smart', 'title' => '🎯 Smart Alerts']],
+                        ['type' => 'reply', 'reply' => ['id' => 'mode_live', 'title' => '⚡ Live Updates']],
+                        ['type' => 'reply', 'reply' => ['id' => 'mode_mbm', 'title' => '🕐 Minute by Minute']],
+                    ];
+                    
+                    $whatsapp->sendInteractiveButtons(
+                        $sub->phone_number,
+                        "📋 Match Update",
+                        $digestMsg,
+                        "Choose update frequency:",
+                        $digestButtons
+                    );
                     usleep(150000);
                     $sent++;
                 }
