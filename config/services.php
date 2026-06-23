@@ -92,4 +92,9 @@ return [
         'callback_url' => env('MPESA_CALLBACK_URL'),
     ],
 
+    // Helaplus WhatsApp API wrapper
+    'helaplus' => [
+        'api_key' => env('HELAPLUS_API_KEY'),
+    ],
+
 ];
