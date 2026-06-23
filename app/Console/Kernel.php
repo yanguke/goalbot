@@ -12,6 +12,12 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        // Test scheduler every minute (temporary)
+        $schedule->command('test-scheduler')
+            ->everyMinute()
+            ->description('Test scheduler functionality')
+            ->withoutOverlapping();
+
         // Send hourly metrics report to monitoring group
         $schedule->command('app:send-hourly-metrics')
             ->hourly()
