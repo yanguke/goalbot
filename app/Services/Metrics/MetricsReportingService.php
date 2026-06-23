@@ -5,23 +5,19 @@ namespace App\Services\Metrics;
 use App\Models\Subscriber;
 use App\Models\LandingVisit;
 use App\Models\Lead;
+use App\Services\WhatsApp\MessageSender;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MetricsReportingService
 {
-    private string $apiUrl = 'https://niaje.helaplus.com/client/sendMessage/DCBA';
-    private ?string $apiKey;
-    private string $chatId = '120363426674587893@g.us';
+    private MessageSender $messageSender;
+    private string $monitoringChatId = '120363426674587893@g.us';
 
-    public function __construct()
+    public function __construct(MessageSender $messageSender)
     {
-        $this->apiKey = config('services.helaplus.api_key');
-        
-        if (empty($this->apiKey)) {
-            Log::warning('Helaplus API key not configured. Metrics reporting will be disabled.');
-        }
+        $this->messageSender = $messageSender;
     }
 
     /**
@@ -273,37 +269,34 @@ class MetricsReportingService
     }
 
     /**
-     * Send message via Helaplus API
+     * Send message via existing WhatsApp MessageSender
      */
     private function sendMessage(string $message): bool
     {
-        if (empty($this->apiKey)) {
-            Log::warning('Cannot send metrics report: Helaplus API key not configured', [
-                'message_length' => strlen($message)
-            ]);
-            return false;
-        }
+        try {
+            // Send to monitoring group using existing WhatsApp system
+            $result = $this->messageSender->sendTextMessage(
+                $this->monitoringChatId,
+                $message
+            );
 
-        $response = Http::timeout(30)
-            ->withHeaders([
-                'Content-Type' => 'application/json',
-                'x-api-key' => $this->apiKey,
-            ])
-            ->post($this->apiUrl, [
-                'chatId' => $this->chatId,
-                'content' => $message,
-                'contentType' => 'string'
-            ]);
-
-        if ($response->successful()) {
-            Log::info('Metrics report sent to monitoring group', [
-                'message_length' => strlen($message)
-            ]);
-            return true;
-        } else {
-            Log::error('Failed to send metrics report', [
-                'status' => $response->status(),
-                'response' => $response->body()
+            if ($result['success'] ?? false) {
+                Log::info('Metrics report sent to monitoring group', [
+                    'message_length' => strlen($message),
+                    'chat_id' => $this->monitoringChatId
+                ]);
+                return true;
+            } else {
+                Log::error('Failed to send metrics report', [
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'chat_id' => $this->monitoringChatId
+                ]);
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception sending metrics report', [
+                'error' => $e->getMessage(),
+                'chat_id' => $this->monitoringChatId
             ]);
             return false;
         }
