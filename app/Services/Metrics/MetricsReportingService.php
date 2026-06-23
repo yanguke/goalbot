@@ -275,12 +275,12 @@ class MetricsReportingService
     {
         try {
             // Send to monitoring group using existing WhatsApp system
-            $result = $this->messageSender->sendTextMessage(
+            $success = $this->messageSender->sendText(
                 $this->monitoringChatId,
                 $message
             );
 
-            if ($result['success'] ?? false) {
+            if ($success) {
                 Log::info('Metrics report sent to monitoring group', [
                     'message_length' => strlen($message),
                     'chat_id' => $this->monitoringChatId
@@ -288,7 +288,6 @@ class MetricsReportingService
                 return true;
             } else {
                 Log::error('Failed to send metrics report', [
-                    'error' => $result['error'] ?? 'Unknown error',
                     'chat_id' => $this->monitoringChatId
                 ]);
                 return false;
