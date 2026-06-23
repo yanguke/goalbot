@@ -18,6 +18,12 @@ class Kernel extends ConsoleKernel
             ->description('Send hourly platform metrics to WhatsApp monitoring group')
             ->withoutOverlapping();
 
+        // Sync Meta Ads performance data
+        $schedule->command('app:sync-meta-ads-data')
+            ->everyThirtyMinutes()
+            ->description('Sync Meta Ads performance data from Facebook API')
+            ->withoutOverlapping();
+
         // Send daily metrics report (optional - can be enabled if needed)
         // $schedule->command('app:send-daily-metrics')
         //     ->dailyAt('09:00')
