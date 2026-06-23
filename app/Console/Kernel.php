@@ -16,7 +16,13 @@ class Kernel extends ConsoleKernel
         $schedule->command('app:send-hourly-metrics')
             ->hourly()
             ->description('Send hourly platform metrics to WhatsApp monitoring group')
-            ->withoutOverlapping();
+            ->withoutOverlapping()
+            ->onSuccess(function () {
+                Log::info('Hourly metrics report completed successfully');
+            })
+            ->onFailure(function () {
+                Log::error('Hourly metrics report failed');
+            });
 
         // Sync Meta Ads performance data
         $schedule->command('app:sync-meta-ads-data')
