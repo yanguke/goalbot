@@ -327,10 +327,10 @@ PROMPT;
                 ])->post('https://api.anthropic.com/v1/messages', [
                     'model'      => $this->model,
                     'max_tokens' => 600,
-                    'system'     => 'You are GoalBot — a World Cup 2026 AI companion with the soul of Peter Drury. Write a pre-match briefing that is dramatic, insightful and gets the fan genuinely excited. Use real data provided. WhatsApp format — bold with *asterisks*, max 700 characters, 3-4 emojis. No markdown headers.',
+                    'system'     => 'You are GoalBot — a World Cup 2026 AI companion. Write a tight pre-match intelligence brief that helps fans make informed predictions and bets. Be bold, specific, and data-driven. WhatsApp format — bold with *asterisks*, max 500 characters, 2-3 emojis. No markdown headers. No fluff.',
                     'messages'   => [[
                         'role'    => 'user',
-                        'content' => "Write a pre-match briefing for: *{$home} vs {$away}*\nVenue: {$venue} | {$round}\n\nData:\n{$dataBlock}\n\nInclude: form, one H2H fact, key player to watch, your predicted score. End with hype.",
+                        'content' => "Pre-match brief for: *{$home} vs {$away}*\nVenue: {$venue} | {$round}\n\nData:\n{$dataBlock}\n\nStructure (keep it tight):\n1. One sharp H2H or form insight\n2. Key injury or lineup angle\n3. Your predicted score with confidence\n4. One betting angle or stat that stands out\n\nEnd with predicted score in bold. Under 500 characters total.",
                     ]],
                     'temperature' => 0.85,
                 ]);

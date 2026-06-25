@@ -24,14 +24,12 @@ class SendReminders extends Command
     ): int {
         $this->info('Checking for upcoming matches...');
 
-        // Reminder windows — running every 5 min, each window is wider than the interval
-        // to guarantee every match gets exactly one notification per milestone
+        // Two reminder windows only:
+        //   2 hours — full pre-match intelligence briefing
+        //   10 minutes — short sharp kickoff countdown
         $windows = [
-            ['label' => '5 minutes',  'from' => now()->addMinutes(5),  'to' => now()->addMinutes(11)],
-            ['label' => '10 minutes', 'from' => now()->addMinutes(10), 'to' => now()->addMinutes(16)],
-            ['label' => '15 minutes', 'from' => now()->addMinutes(15), 'to' => now()->addMinutes(21)],
-            ['label' => '1 hour',     'from' => now()->addMinutes(60), 'to' => now()->addMinutes(75)],
-            ['label' => '2 hours',    'from' => now()->addMinutes(115),'to' => now()->addMinutes(125)],
+            ['label' => '2 hours',    'from' => now()->addMinutes(115), 'to' => now()->addMinutes(125)],
+            ['label' => '10 minutes', 'from' => now()->addMinutes(10),  'to' => now()->addMinutes(16)],
         ];
 
         $anyFound = false;
@@ -97,16 +95,12 @@ class SendReminders extends Command
         // Reminder tone is window-specific ("5 minutes" vs "2 hours")
         $reminder = $ai->generateReminder($match, $windowLabel);
 
-        // Prediction + odds only at 2hr and 1hr (not every 5min countdown)
-        $prediction = in_array($windowLabel, ['2 hours', '1 hour'])
-            ? $this->generatePrediction($homeTeam, $awayTeam, $venue, $round)
-            : null;
-        $oddsMsg = in_array($windowLabel, ['2 hours', '1 hour'])
-            ? $this->buildOddsMessage($football, $fixtureId, $homeTeam, $awayTeam)
-            : null;
+        // Full intelligence briefing at 2hr only — prediction, odds, H2H, form
+        $briefing = ($windowLabel === '2 hours') ? $ai->generatePreMatchBriefing($match) : null;
 
-        // Rich pre-match briefing only at 1hr (data-heavy, send once)
-        $briefing = ($windowLabel === '1 hour') ? $ai->generatePreMatchBriefing($match) : null;
+        // No separate prediction/odds message — all baked into the briefing
+        $prediction = null;
+        $oddsMsg    = null;
         
         foreach ($subscribers as $subscriber) {
             try {
@@ -114,9 +108,9 @@ class SendReminders extends Command
                     ? $this->personalizeReminder($reminder, $subscriber->favorite_team, $homeTeam, $awayTeam)
                     : $reminder;
 
-                // Prepend urgency header for short windows
-                $urgencyPrefix = in_array($windowLabel, ['5 minutes', '10 minutes', '15 minutes'])
-                    ? "⏰ *{$homeTeam} vs {$awayTeam} kicks off in {$windowLabel}!*\n\n"
+                // 10-minute window: tight urgency header only, no extra messages
+                $urgencyPrefix = ($windowLabel === '10 minutes')
+                    ? "⏰ *{$homeTeam} vs {$awayTeam} kicks off in 10 minutes!*\n\n"
                     : '';
                 $personalizedReminder = $urgencyPrefix . $base;
 
@@ -160,13 +154,9 @@ class SendReminders extends Command
                     usleep(200000);
                 }
 
-                // Send odds + injuries snapshot for 1h/2h windows only
-                if ($oddsMsg && in_array($windowLabel, ['1 hour', '2 hours'])) {
-                    $whatsapp->sendAlert($subscriber->phone_number, $oddsMsg);
-                    usleep(200000);
-                }
+                // Odds are now embedded in the briefing — no separate message
 
-                // Send rich pre-match briefing at 1-hour mark only
+                // Send intelligence briefing at 2hr window
                 if ($briefing) {
                     $whatsapp->sendAlert($subscriber->phone_number, $briefing);
                     usleep(200000);
