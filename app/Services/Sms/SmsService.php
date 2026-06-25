@@ -18,10 +18,10 @@ class SmsService
 
     public function __construct()
     {
-        $this->apiKey   = config('services.wasiliana.api_key', '');
-        $this->username = config('services.wasiliana.username', '');
-        $this->senderId = config('services.wasiliana.sender_id', 'GoalBot');
-        $this->apiUrl   = config('services.wasiliana.sms_url', 'https://api.wasiliana.com/api/developer/v1/messaging/sms/send');
+        $this->apiKey   = (string) config('services.wasiliana.api_key', '');
+        $this->username = (string) config('services.wasiliana.username', '');
+        $this->senderId = (string) config('services.wasiliana.sender_id', 'GoalBot');
+        $this->apiUrl   = (string) config('services.wasiliana.sms_url', 'https://api.wasiliana.com/api/developer/v1/messaging/sms/send');
     }
 
     public function isConfigured(): bool
