@@ -97,4 +97,12 @@ return [
         'api_key' => env('HELAPLUS_API_KEY'),
     ],
 
+    // Wasiliana SMS gateway (Africa's Talking-compatible)
+    'wasiliana' => [
+        'api_key'   => env('WASILIANA_API_KEY'),
+        'username'  => env('WASILIANA_USERNAME'),
+        'sender_id' => env('WASILIANA_SENDER_ID', 'GoalBot'),
+        'sms_url'   => env('WASILIANA_SMS_URL', 'https://api.wasiliana.com/api/developer/v1/messaging/sms/send'),
+    ],
+
 ];

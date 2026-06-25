@@ -5,7 +5,11 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminSubscriberController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\LeadCaptureController;
+use App\Http\Controllers\UssdController;
 use Illuminate\Support\Facades\Route;
+
+// USSD callback — Wasiliana POSTs here when a user dials the USSD code
+Route::post('/ussd', [UssdController::class, 'handle']);
 
 Route::get('/', [LandingPageController::class, 'index']);
 Route::get('/go', [LandingPageController::class, 'click']);
