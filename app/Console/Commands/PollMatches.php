@@ -317,13 +317,6 @@ class PollMatches extends Command
             ['id' => "predict_{$matchId}",  'title' => '🔮 AI Prediction'],
         ];
 
-        // Frequency control buttons (always include)
-        $frequencyButtons = [
-            ['id' => "mode_smart",          'title' => '🎯 Smart Alerts'],
-            ['id' => "mode_live",           'title' => '⚡ Live Updates'],
-            ['id' => "mode_mbm",            'title' => '🕐 Minute by Minute'],
-        ];
-
         // Send every entry to minute-by-minute subscribers
         foreach ($allEntries as $entry) {
             $mbmLockKey = 'mbm_sent_' . md5($matchId . $entry['time'] . $entry['text']);
@@ -334,10 +327,10 @@ class PollMatches extends Command
             $minute = $entry['time'];
             $text   = $entry['text'];
 
-            // Pick 2 random buttons from pool + 1 frequency button
-            $poolKeys    = array_rand($buttonPool, 2);
-            $freqKey     = array_rand($frequencyButtons, 1);
-            
+            // 2 random content buttons + 1 fixed "Change Frequency" button always in slot 3
+            $poolKeys = array_rand($buttonPool, min(2, count($buttonPool)));
+            if (!is_array($poolKeys)) $poolKeys = [$poolKeys];
+
             $buttons = array_merge(
                 array_map(fn($k) => [
                     'type'  => 'reply',
@@ -345,7 +338,7 @@ class PollMatches extends Command
                 ], $poolKeys),
                 [[
                     'type'  => 'reply',
-                    'reply' => ['id' => $frequencyButtons[$freqKey]['id'], 'title' => $frequencyButtons[$freqKey]['title']],
+                    'reply' => ['id' => 'change_frequency', 'title' => '⚙️ Change Frequency'],
                 ]]
             );
 

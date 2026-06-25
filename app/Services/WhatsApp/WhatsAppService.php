@@ -779,6 +779,10 @@ class WhatsAppService
                 $this->sendFavoriteTeamPrompt($subscriber->phone_number);
                 return ['status' => 'favorite_prompt_sent'];
                 
+            case 'change_frequency':
+                $this->sendCommentaryStylePrompt($subscriber->phone_number, $subscriber);
+                return ['status' => 'frequency_prompt_sent'];
+
             case 'commentary':
             case 'mode_smart':
             case 'mode_live':
